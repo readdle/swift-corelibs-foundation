@@ -91,6 +91,9 @@ CFURLSessionEasyCode CFURLSession_easy_setopt_int(CFURLSessionEasyHandle _Nonnul
 CFURLSessionEasyCode CFURLSession_easy_setopt_long(CFURLSessionEasyHandle _Nonnull curl, CFURLSessionOption option, long a) {
     return MakeEasyCode(curl_easy_setopt(curl, option.value, a));
 }
+CFURLSessionEasyCode CFURLSession_easy_setopt_unsigned_long(CFURLSessionEasyHandle _Nonnull curl, CFURLSessionOption option, unsigned long a) {
+    return MakeEasyCode(curl_easy_setopt(curl, option.value, a));
+}
 CFURLSessionEasyCode CFURLSession_easy_setopt_int64(CFURLSessionEasyHandle _Nonnull curl, CFURLSessionOption option, int64_t a) {
     return MakeEasyCode(curl_easy_setopt(curl, option.value, a));
 }
@@ -478,6 +481,7 @@ CFURLSessionOption const CFURLSessionOptionDNS_INTERFACE = { CURLOPT_DNS_INTERFA
 CFURLSessionOption const CFURLSessionOptionDNS_LOCAL_IP4 = { CURLOPT_DNS_LOCAL_IP4 };
 CFURLSessionOption const CFURLSessionOptionDNS_LOCAL_IP6 = { CURLOPT_DNS_LOCAL_IP6 };
 CFURLSessionOption const CFURLSessionOptionLOGIN_OPTIONS = { CURLOPT_LOGIN_OPTIONS };
+unsigned long const CFURLSessionOptionAUTH_ANY = CURLAUTH_ANY;
 
 //Options unavailable on Ubuntu 14.04
 /*CFURLSessionOption const CFURLSessionOptionSSL_ENABLE_NPN = { CURLOPT_SSL_ENABLE_NPN };

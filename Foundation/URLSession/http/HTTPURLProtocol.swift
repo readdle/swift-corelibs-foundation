@@ -437,6 +437,16 @@ internal extension _HTTPURLProtocol {
     }
 }
 
+extension _HTTPURLProtocol {
+    
+    func set(credential: URLCredential) {
+        if let username = credential.user, let password = credential.password {
+            easyHandle.set(username: username, password: password)
+        }
+    }
+    
+}
+
 fileprivate extension HTTPURLResponse {
     /// Type safe HTTP header field name(s)
     enum _Field: String {

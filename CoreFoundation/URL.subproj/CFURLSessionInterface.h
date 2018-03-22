@@ -383,6 +383,7 @@ CF_EXPORT CFURLSessionOption const CFURLSessionOptionLOGIN_OPTIONS; // CURLOPT_L
 //CF_EXPORT CFURLSessionOption const CFURLSessionOptionPROXY_SERVICE_NAME; // CURLOPT_PROXY_SERVICE_NAME
 //CF_EXPORT CFURLSessionOption const CFURLSessionOptionSERVICE_NAME; // CURLOPT_SERVICE_NAME
 //CF_EXPORT CFURLSessionOption const CFURLSessionOptionPIPEWAIT; // CURLOPT_PIPEWAIT
+CF_EXPORT unsigned long const CFURLSessionOptionAUTH_ANY;
 
 
 /// This is a mash-up of these two types:
@@ -570,6 +571,7 @@ CF_EXPORT CFURLSessionEasyCode CFURLSession_easy_setopt_fptr(CFURLSessionEasyHan
 CF_EXPORT CFURLSessionEasyCode CFURLSession_easy_setopt_ptr(CFURLSessionEasyHandle _Nonnull curl, CFURLSessionOption option, void *_Nullable a);
 CF_EXPORT CFURLSessionEasyCode CFURLSession_easy_setopt_int(CFURLSessionEasyHandle _Nonnull curl, CFURLSessionOption option, int a);
 CF_EXPORT CFURLSessionEasyCode CFURLSession_easy_setopt_long(CFURLSessionEasyHandle _Nonnull curl, CFURLSessionOption option, long a);
+CF_EXPORT CFURLSessionEasyCode CFURLSession_easy_setopt_unsigned_long(CFURLSessionEasyHandle _Nonnull curl, CFURLSessionOption option, unsigned long a);
 CF_EXPORT CFURLSessionEasyCode CFURLSession_easy_setopt_int64(CFURLSessionEasyHandle _Nonnull curl, CFURLSessionOption option, int64_t a);
 CF_EXPORT CFURLSessionEasyCode CFURLSession_easy_setopt_wc(CFURLSessionEasyHandle _Nonnull curl, CFURLSessionOption option, size_t(*_Nonnull a)(char *_Nonnull, size_t, size_t, void *_Nullable));
 CF_EXPORT CFURLSessionEasyCode CFURLSession_easy_setopt_fwc(CFURLSessionEasyHandle _Nonnull curl, CFURLSessionOption option, size_t(*_Nonnull a)(char *_Nonnull, size_t, size_t, void *_Nullable));

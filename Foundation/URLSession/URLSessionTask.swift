@@ -37,7 +37,14 @@ open class URLSessionTask : NSObject, NSCopying {
     private let syncQ = DispatchQueue(label: "org.swift.URLSessionTask.SyncQ")
     
     /// All operations must run on this queue.
-    internal let workQueue: DispatchQueue 
+    internal let workQueue: DispatchQueue
+    
+    public func setCredentials(_ credential: URLCredential) {
+        guard let p = _protocol as? _HTTPURLProtocol else {
+            fatalError()
+        }
+        p.set(credential: credential)
+    }
     
     public override init() {
         // Darwin Foundation oddly allows calling this initializer, even though
