@@ -279,6 +279,13 @@ extension _EasyHandle {
             CFURLSession_easy_setopt_unsigned_long(rawHandle, CFURLSessionOptionHTTPAUTH, CFURLSessionOptionAUTH_ANY)
         }
     }
+    
+    func set(trustAllCertificates: Bool) {
+        let verifyPeer = trustAllCertificates ? 0 : 1
+        let verifyHost = trustAllCertificates ? 0 : 1
+        CFURLSession_easy_setopt_long(rawHandle, CFURLSessionOptionSSL_VERIFYPEER, verifyPeer)
+        CFURLSession_easy_setopt_long(rawHandle, CFURLSessionOptionSSL_VERIFYHOST, verifyHost)
+    }
 
 }
 

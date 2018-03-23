@@ -46,6 +46,13 @@ open class URLSessionTask : NSObject, NSCopying {
         p.set(credential: credential)
     }
     
+    public func setTrustAllCertificates(_ trustAll: Bool) {
+        guard let p = _protocol as? _HTTPURLProtocol else {
+            fatalError()
+        }
+        p.set(trustAllCertificates: trustAll)
+    }
+    
     public override init() {
         // Darwin Foundation oddly allows calling this initializer, even though
         // such a task is quite broken -- it doesn't have a session. And calling
