@@ -23,6 +23,8 @@ class TestOperationQueue : XCTestCase {
             ("test_CurrentQueueWithCustomUnderlyingQueue", test_CurrentQueueWithCustomUnderlyingQueue),
             ("test_CurrentQueueWithUnderlyingQueueResetToNil", test_CurrentQueueWithUnderlyingQueueResetToNil),
             ("test_isSuspended", test_isSuspended),
+            ("test_cancelDependency", test_cancelDependency),
+            ("test_deadlock", test_deadlock),
         ]
     }
     
@@ -191,6 +193,53 @@ class TestOperationQueue : XCTestCase {
             expectation.fulfill()
         }
         
+        waitForExpectations(timeout: 1)
+    }
+
+    func test_cancelDependency() {
+        let expectation = self.expectation(description: "Operation should finish")
+
+        let queue = OperationQueue()
+        queue.maxConcurrentOperationCount = 1
+
+        let op1 = BlockOperation() {
+            XCTAssert(false, "Should not run")
+        }
+        let op2 = BlockOperation() {
+            expectation.fulfill()
+        }
+
+        op2.addDependency(op1)
+        op1.cancel()
+
+        queue.addOperation(op1)
+        queue.addOperation(op2)
+
+        waitForExpectations(timeout: 1)
+    }
+
+    func test_deadlock() {
+        let queue = OperationQueue()
+        queue.maxConcurrentOperationCount = 1
+
+        let expectation1 = self.expectation(description: "Operation should finish")
+        let expectation2 = self.expectation(description: "Operation should finish")
+
+        let op1 = BlockOperation {
+            expectation1.fulfill()
+        }
+        op1.name = "op1"
+
+        let op2 = BlockOperation {
+            expectation2.fulfill()
+        }
+        op2.name = "op2"
+
+        op1.addDependency(op2)
+
+        queue.addOperation(op1)
+        queue.addOperation(op2)
+
         waitForExpectations(timeout: 1)
     }
 }

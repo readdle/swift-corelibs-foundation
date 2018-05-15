@@ -168,6 +168,21 @@ open class Operation : NSObject {
 #endif
         _ready = true
     }
+
+    internal func _checkReadyness() -> Bool {
+        if _ready {
+            return true
+        }
+
+        #if DEPLOYMENT_ENABLE_LIBDISPATCH
+            if _depGroup.wait(timeout: .now()) == .success {
+                _ready = true
+                return true
+            }
+        #endif
+
+        return false
+    }
 }
 
 /// The following two methods are added to provide support for Operations which
@@ -285,7 +300,41 @@ internal struct _OperationList {
             }
         }
     }
-    
+
+    func dequeueIfReady(from operations: inout [Operation]) -> Operation? {
+        if operations.isEmpty {
+            return nil
+        }
+
+        for (i, operation) in operations.enumerated() {
+            if operation._checkReadyness() {
+                operations.remove(at: i)
+                return operation
+            }
+        }
+
+        return nil
+    }
+
+    mutating func dequeueIfReady() -> Operation? {
+        if let operation = dequeueIfReady(from: &veryHigh) {
+            return operation
+        }
+        if let operation = dequeueIfReady(from: &high) {
+            return operation
+        }
+        if let operation = dequeueIfReady(from: &normal) {
+            return operation
+        }
+        if let operation = dequeueIfReady(from: &low) {
+            return operation
+        }
+        if let operation = dequeueIfReady(from: &veryLow) {
+            return operation
+        }
+        return nil
+    }
+
     mutating func dequeue() -> Operation? {
         if !veryHigh.isEmpty {
             return veryHigh.remove(at: 0)
@@ -385,6 +434,13 @@ open class OperationQueue: NSObject {
     }
 #endif
 
+    internal func _dequeueOperationIfReady() -> Operation? {
+        lock.lock()
+        let op = _operations.dequeueIfReady()
+        lock.unlock()
+        return op
+    }
+
     internal func _dequeueOperation() -> Operation? {
         lock.lock()
         let op = _operations.dequeue()
@@ -397,13 +453,17 @@ open class OperationQueue: NSObject {
     }
     
     internal func _runOperation() {
+        if let op = _dequeueOperationIfReady() {
+            op.start()
+            return
+        }
+
         if let op = _dequeueOperation() {
             if !op.isCancelled {
                 op._waitUntilReady()
-                if !op.isCancelled {
-                    op.start()
-                }
             }
+
+            op.start()
         }
     }
     
