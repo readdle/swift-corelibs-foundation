@@ -41,11 +41,11 @@ public protocol URLAuthenticationChallengeSender : NSObjectProtocol {
 }
 
 /*!
-    @class URLAuthenticationChallenge
-    @discussion This class represents an authentication challenge. It
-    provides all the information about the challenge, and has a method
-    to indicate when it's done.
-*/
+ @class URLAuthenticationChallenge
+ @discussion This class represents an authentication challenge. It
+ provides all the information about the challenge, and has a method
+ to indicate when it's done.
+ */
 open class URLAuthenticationChallenge : NSObject, NSSecureCoding {
 
     private let _protectionSpace: URLProtectionSpace
@@ -54,7 +54,7 @@ open class URLAuthenticationChallenge : NSObject, NSSecureCoding {
     private let _failureResponse: URLResponse?
     private let _error: Error?
     private let _sender: URLAuthenticationChallengeSender
-    
+
     static public var supportsSecureCoding: Bool {
         return true
     }

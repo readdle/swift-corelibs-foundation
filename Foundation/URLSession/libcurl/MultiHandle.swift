@@ -249,6 +249,10 @@ fileprivate extension _EasyHandle {
             return NSURLErrorTimedOut
         case (CFURLSessionEasyCodeOPERATION_TIMEDOUT, _):
             return NSURLErrorTimedOut
+        case (CFURLSessionEasyCodeSSL_CACERT, _):
+            return NSURLErrorServerCertificateUntrusted
+        case (CFURLSessionEasyCodePEER_FAILED_VERIFICATION, _):
+            return NSURLErrorServerCertificateWrongHost
         default:
             //TODO: Need to map to one of the NSURLError... constants
             return NSURLErrorUnknown

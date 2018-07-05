@@ -11,6 +11,8 @@ import CoreFoundation
 import Dispatch
 
 internal class _HTTPURLProtocol: _NativeProtocol {
+    var urlCredentials: URLCredential?
+    var trustAllCertificates: Bool?
 
     public required init(task: URLSessionTask, cachedResponse: CachedURLResponse?, client: URLProtocolClient?) {
         super.init(task: task, cachedResponse: cachedResponse, client: client)
@@ -104,7 +106,7 @@ internal class _HTTPURLProtocol: _NativeProtocol {
             failWith(error: error, request: request)
             return
         }
- 
+
         // HTTP Options:
         easyHandle.set(followLocation: false)
 
@@ -438,17 +440,21 @@ internal extension _HTTPURLProtocol {
 }
 
 extension _HTTPURLProtocol {
-    
     func set(credential: URLCredential) {
+        self.urlCredentials = credential
         if let username = credential.user, let password = credential.password {
             easyHandle.set(username: username, password: password)
         }
     }
-    
+
     func set(trustAllCertificates: Bool) {
+        self.trustAllCertificates = trustAllCertificates
         easyHandle.set(trustAllCertificates: trustAllCertificates)
     }
-    
+
+    func set(authMethod: String) -> Bool {
+        return easyHandle.set(authMethod: authMethod)
+    }
 }
 
 fileprivate extension HTTPURLResponse {

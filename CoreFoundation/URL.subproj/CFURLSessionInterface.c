@@ -482,6 +482,10 @@ CFURLSessionOption const CFURLSessionOptionDNS_LOCAL_IP4 = { CURLOPT_DNS_LOCAL_I
 CFURLSessionOption const CFURLSessionOptionDNS_LOCAL_IP6 = { CURLOPT_DNS_LOCAL_IP6 };
 CFURLSessionOption const CFURLSessionOptionLOGIN_OPTIONS = { CURLOPT_LOGIN_OPTIONS };
 unsigned long const CFURLSessionOptionAUTH_ANY = CURLAUTH_ANY;
+unsigned long const CFURLSessionOptionAUTH_DIGEST = CURLAUTH_DIGEST;
+unsigned long const CFURLSessionOptionAUTH_NEGOTIATE = CURLAUTH_NEGOTIATE;
+unsigned long const CFURLSessionOptionAUTH_BASIC = CURLAUTH_BASIC;
+unsigned long const CFURLSessionOptionAUTH_NTLM = CURLAUTH_NTLM;
 
 //Options unavailable on Ubuntu 14.04
 /*CFURLSessionOption const CFURLSessionOptionSSL_ENABLE_NPN = { CURLOPT_SSL_ENABLE_NPN };

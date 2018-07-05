@@ -37,6 +37,8 @@ open class URLCredential : NSObject, NSSecureCoding, NSCopying {
     private var _password : String
     private var _persistence : Persistence
     
+    public private(set) var _trustAllCertificated: Bool?
+    
     /*!
         @method initWithUser:password:persistence:
         @abstract Initialize a URLCredential with a user and password
@@ -54,7 +56,10 @@ open class URLCredential : NSObject, NSSecureCoding, NSCopying {
         _persistence = persistence
         super.init()
     }
-    
+    public convenience init(trust: Bool) {
+        self.init(user: "", password: "", persistence: Persistence.none)
+        self._trustAllCertificated = trust
+    }
     /*!
         @method credentialWithUser:password:persistence:
         @abstract Create a new URLCredential with a user and password

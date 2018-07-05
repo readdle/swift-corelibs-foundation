@@ -384,7 +384,10 @@ CF_EXPORT CFURLSessionOption const CFURLSessionOptionLOGIN_OPTIONS; // CURLOPT_L
 //CF_EXPORT CFURLSessionOption const CFURLSessionOptionSERVICE_NAME; // CURLOPT_SERVICE_NAME
 //CF_EXPORT CFURLSessionOption const CFURLSessionOptionPIPEWAIT; // CURLOPT_PIPEWAIT
 CF_EXPORT unsigned long const CFURLSessionOptionAUTH_ANY;
-
+CF_EXPORT unsigned long const CFURLSessionOptionAUTH_DIGEST;
+CF_EXPORT unsigned long const CFURLSessionOptionAUTH_BASIC;
+CF_EXPORT unsigned long const CFURLSessionOptionAUTH_NTLM;
+CF_EXPORT unsigned long const CFURLSessionOptionAUTH_NEGOTIATE;
 
 /// This is a mash-up of these two types:
 /// curl_infotype & CURLoption

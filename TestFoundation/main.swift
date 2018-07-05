@@ -107,4 +107,6 @@ XCTMain([
     testCase(TestUnit.allTests),
     testCase(TestDimension.allTests),
     testCase(TestNSLock.allTests),
+    testCase(TestURLSessionRealServer.allTests),
 ])
+
