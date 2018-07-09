@@ -589,6 +589,7 @@ extension Scanner {
         }
     }
     
+    @discardableResult
     public func scanString(_ string:String, into ptr: UnsafeMutablePointer<String?>?) -> Bool {
         if let str = scanString(string) {
             ptr?.pointee = str
