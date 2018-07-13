@@ -260,40 +260,41 @@ internal class _NativeProtocol: URLProtocol, _EasyHandleDelegate {
     }
 
     func seekInputStream(to position: UInt64) throws {
-        // We will reset the body source and seek forward.
-        guard let session = task?.session as? URLSession else { fatalError() }
-        
-        var currentInputStream: InputStream?
-        
-        if let delegate = session.delegate as? URLSessionTaskDelegate {
-            let dispatchGroup = DispatchGroup()
-            dispatchGroup.enter()
-            
-            delegate.urlSession(session, task: task!, needNewBodyStream: { inputStream in
-                currentInputStream = inputStream
-                dispatchGroup.leave()
-            })
-            
-            _ = dispatchGroup.wait(timeout: .now() + 7)
-        }
-      
-        if let url = self.request.url, let inputStream = currentInputStream {
-            switch self.internalState {
-            case .transferInProgress(let currentTransferState):
-                switch currentTransferState.requestBodySource {
-                case is _BodyStreamSource:
-                    try inputStream.seek(to: position)
-                    let drain = self.createTransferBodyDataDrain()
-                    let source = _BodyStreamSource(inputStream: inputStream)
-                    let transferState = _TransferState(url: url, bodyDataDrain: drain, bodySource: source)
-                    self.internalState = .transferInProgress(transferState)
-                default:
-                    NSUnimplemented()
-                }
-            default:
-                //TODO: it's possible?
-                break
+        switch self.internalState {
+        case .transferReady(let currentTransferState):
+            if currentTransferState.requestBodySource is _BodyStreamSource,
+               let session = task?.session as? URLSession,
+               let delegate = session.delegate as? URLSessionTaskDelegate,
+               let url = self.request.url,
+               let urlSessionTask = task {
+
+                // We assume that this closure not @escaping - because it can be called from curl(https://curl.haxx.se/libcurl/c/CURLOPT_SEEKFUNCTION.html)
+                delegate.urlSession(session, task: urlSessionTask, needNewBodyStream: { inputStream in
+                    if let inputStream = inputStream {
+                        if inputStream.streamStatus == .notOpen {
+                            inputStream.open()
+                        }
+
+                        let source = _BodyStreamSource(inputStream: inputStream)
+                        let transferState = _TransferState(url: url,
+                                bodyDataDrain: self.createTransferBodyDataDrain(),
+                                bodySource: source)
+                        self.internalState = .transferInProgress(transferState)
+                    }
+                })
+            } else if let bodyStreamSource = currentTransferState.requestBodySource,
+                      let url = self.request.url {
+                try bodyStreamSource.seekTo(to: position)
+                let transferState = _TransferState(url: url,
+                        bodyDataDrain: self.createTransferBodyDataDrain(),
+                        bodySource: bodyStreamSource)
+
+                self.internalState = .transferInProgress(transferState)
+            } else {
+                throw _Error.cannotSeek
             }
+        default:
+            throw _Error.cannotSeek
         }
     }
 
@@ -382,7 +383,19 @@ internal class _NativeProtocol: URLProtocol, _EasyHandleDelegate {
         }
 
         if case .transferReady(let transferState) = self.internalState {
-            self.internalState = .transferInProgress(transferState)
+            if let streamSource = transferState.requestBodySource as? _BodyStreamSource,
+               [.atEnd, .closed, .reading].contains(streamSource.inputStream.streamStatus) {
+
+                try? self.seekInputStream(to: 0)
+
+                // Check if state not changed
+                if case .transferReady(let transferState) = self.internalState {
+                    self.internalState = .transferInProgress(transferState)
+                }
+
+            } else {
+                self.internalState = .transferInProgress(transferState)
+            }
         }
     }
 
@@ -554,6 +567,7 @@ extension _NativeProtocol._InternalState {
 extension _NativeProtocol {
 
     enum _Error: Error {
+        case cannotSeek
         case parseSingleLineError
         case parseCompleteHeaderError
     }

@@ -45,6 +45,8 @@ internal protocol _BodySource: class {
     /// return `.done`. Since this is non-blocking, it will return `.retryLater`
     /// if no data is available at this point, but will be available later.
     func getNextChunk(withLength length: Int) -> _BodySourceDataChunk
+
+    func seekTo(to position: UInt64) throws
 }
 internal enum _BodySourceDataChunk {
     case data(DispatchData)
@@ -54,28 +56,36 @@ internal enum _BodySourceDataChunk {
     case retryLater
     case error
 }
+enum _HTTPBodySourceError: Error {
+    case cannotSeek
+}
 
 internal final class _BodyStreamSource {
     let inputStream: InputStream
-    
+
     init(inputStream: InputStream) {
         self.inputStream = inputStream
     }
 }
 
 extension _BodyStreamSource : _BodySource {
+    func seekTo(to position: UInt64) throws {
+        // You need manually recreate or extend an InputStream, it cannot done by general InputStream
+        throw _HTTPBodySourceError.cannotSeek
+    }
+
     func getNextChunk(withLength length: Int) -> _BodySourceDataChunk {
         guard inputStream.hasBytesAvailable else {
             return .done
         }
-        
+
         let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: length, alignment: MemoryLayout<UInt8>.alignment)
-        
+
         guard let pointer = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
             buffer.deallocate()
             return .error
         }
-        
+
         let readBytes = self.inputStream.read(pointer, maxLength: length)
         if readBytes > 0 {
             let dispatchData = DispatchData(bytesNoCopy: UnsafeRawBufferPointer(buffer), deallocator: .custom(nil, { buffer.deallocate() }))
@@ -94,15 +104,31 @@ extension _BodyStreamSource : _BodySource {
 
 /// A body data source backed by `DispatchData`.
 internal final class _BodyDataSource {
-    var data: DispatchData! 
+    var data: DispatchData!
+    var originalData: DispatchData!
     init(data: DispatchData) {
         self.data = data
+        self.originalData = data
     }
 }
+
 
 extension _BodyDataSource : _BodySource {
     enum _Error : Error {
         case unableToRewindData
+    }
+
+    func rewind() {
+        data = originalData
+    }
+
+    func seekTo(to position: UInt64) throws {
+        if position >= originalData.count {
+            throw _HTTPBodySourceError.cannotSeek
+        }
+
+        rewind()
+        data = data.subdata(in: 0..<Int(position))
     }
 
     func getNextChunk(withLength length: Int) -> _BodySourceDataChunk {
@@ -245,7 +271,11 @@ extension _BodyFileSource {
 }
 
 extension _BodyFileSource : _BodySource {
-    func getNextChunk(withLength length: Int) -> _BodySourceDataChunk {    
+    func seekTo(to position: UInt64) throws {
+        throw _HTTPBodySourceError.cannotSeek
+    }
+
+    func getNextChunk(withLength length: Int) -> _BodySourceDataChunk {
         switch availableChunk {
         case .empty:
             readNextChunk()

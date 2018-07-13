@@ -11,6 +11,9 @@ import CoreFoundation
 import Dispatch
 
 internal class _HTTPURLProtocol: _NativeProtocol {
+    enum _Error: Error {
+        case cannotSeek
+    }
     var urlCredentials: URLCredential?
     var trustAllCertificates: Bool?
 

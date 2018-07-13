@@ -117,7 +117,7 @@ open class URLSessionTask : NSObject, NSCopying {
     fileprivate var previousFailureCount = 0
     fileprivate var protectionSpaces: [URLProtectionSpace] = []
     fileprivate var protectionSpacesInited = false
-    
+
     /// May differ from originalRequest due to http server redirection
     /*@NSCopying*/ open internal(set) var currentRequest: URLRequest? {
         get {
@@ -539,7 +539,7 @@ open class URLSessionStreamTask : URLSessionTask {
 /* Key in the userInfo dictionary of an NSError received during a failed download. */
 public let URLSessionDownloadTaskResumeData: String = "NSURLSessionDownloadTaskResumeData"
 
-extension _ProtocolClient : URLProtocolClient {
+extension _ProtocolClient: URLProtocolClient {
 
     func urlProtocol(_ protocol: URLProtocol, didReceive response: URLResponse, cacheStoragePolicy policy: URLCache.StoragePolicy) {
         guard let task = `protocol`.task else { fatalError("Received response, but there's no task.") }
@@ -578,7 +578,7 @@ extension _ProtocolClient : URLProtocolClient {
         guard let response = task.response as? HTTPURLResponse else { fatalError("No response") }
 
         if response.statusCode == 401 {
-            // concate protection space from header and all posible protection spaces
+            // Concat protection space from header with all possibles protection spaces
             if !task.protectionSpacesInited { // init protection spaces
                 var allPossibleProtectionSpaces = AuthProtectionSpace.createAllPossible(using: response)
                 if let protectionSpaceFromHeader = AuthProtectionSpace.createByHeaders(using: response) {
