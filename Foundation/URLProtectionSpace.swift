@@ -358,8 +358,8 @@ open class AuthProtectionSpace: URLProtectionSpace {
 
         let authMethods = [
             NSURLAuthenticationMethodHTTPBasic,
-            NSURLAuthenticationMethodHTTPDigest,
             NSURLAuthenticationMethodNTLM,
+            NSURLAuthenticationMethodHTTPDigest,
             NSURLAuthenticationMethodNegotiate
         ]
 

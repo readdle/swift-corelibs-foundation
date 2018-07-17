@@ -53,9 +53,19 @@ open class URLSessionTask : NSObject, NSCopying {
         workQueue = DispatchQueue(label: "URLSessionTask.notused.0")
         super.init()
     }
+    
     /// Create a data task. If there is a httpBody in the URLRequest, use that as a parameter
     internal convenience init(session: URLSession, request: URLRequest, taskIdentifier: Int) {
-        if let bodyData = request.httpBody {
+        var requestBodyData: Data? = request.httpBody
+        var requestBodyStream: InputStream? = request.httpBodyStream
+
+        // If inputStream in use and 'Content-Length' contains in headers, use data instead of stream(because of Transfer-Encoding: chunked for InputStream)
+        if let inputStream = requestBodyStream, URLSessionTask.containsContentLengthInHeader(request) {
+            requestBodyData = URLSessionTask.inputStreamToData(inputStream)
+            requestBodyStream = nil
+        }
+        
+        if let bodyData = requestBodyData {
             self.init(session: session, request: request, taskIdentifier: taskIdentifier, body: _Body.data(createDispatchData(bodyData)))
         } else if let bodyStream = request.httpBodyStream {
             self.init(session: session, request: request, taskIdentifier: taskIdentifier, body: _Body.stream(bodyStream))
@@ -381,7 +391,33 @@ internal extension URLSessionTask._Body {
     }
 }
 
+fileprivate extension URLSessionTask {
+    class func inputStreamToData(_ inputStream: InputStream) -> Data {
+        var data = Data()
+        let bufferSize = 1024
+        let buffer = malloc(bufferSize).assumingMemoryBound(to: UInt8.self)
+        while inputStream.hasBytesAvailable {
+            let readBytes = inputStream.read(buffer, maxLength: bufferSize)
+            if readBytes > 0 {
+                data.append(buffer, count: readBytes)
+            }
+        }
+        free(buffer)
+        return data
+    }
 
+    class func containsContentLengthInHeader(_ request: URLRequest) -> Bool {
+        if let headers = request.allHTTPHeaderFields {
+
+            for (key, _) in headers {
+                if key.lowercased() == "content-length" {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+}
 fileprivate func errorCode(fileSystemError error: Error) -> Int {
     func fromCocoaErrorCode(_ code: Int) -> Int {
         switch code {
