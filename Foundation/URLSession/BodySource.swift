@@ -128,7 +128,7 @@ extension _BodyDataSource : _BodySource {
         }
 
         rewind()
-        data = data.subdata(in: 0..<Int(position))
+        data = data.subdata(in: Int(position)..<data.count)
     }
 
     func getNextChunk(withLength length: Int) -> _BodySourceDataChunk {

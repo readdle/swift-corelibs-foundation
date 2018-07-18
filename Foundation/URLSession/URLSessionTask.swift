@@ -56,21 +56,22 @@ open class URLSessionTask : NSObject, NSCopying {
     
     /// Create a data task. If there is a httpBody in the URLRequest, use that as a parameter
     internal convenience init(session: URLSession, request: URLRequest, taskIdentifier: Int) {
-        var requestBodyData: Data? = request.httpBody
-        var requestBodyStream: InputStream? = request.httpBodyStream
+        var urlRequest = request
 
         // If inputStream in use and 'Content-Length' contains in headers, use data instead of stream(because of Transfer-Encoding: chunked for InputStream)
-        if let inputStream = requestBodyStream, URLSessionTask.containsContentLengthInHeader(request) {
-            requestBodyData = URLSessionTask.inputStreamToData(inputStream)
-            requestBodyStream = nil
+        if let inputStream = urlRequest.httpBodyStream,
+            let contentLength = URLSessionTask.getContentLengthFromHeader(urlRequest) {
+            let data = URLSessionTask.inputStreamToData(inputStream, contentLength: contentLength)
+            urlRequest.httpBody = data
         }
         
-        if let bodyData = requestBodyData {
-            self.init(session: session, request: request, taskIdentifier: taskIdentifier, body: _Body.data(createDispatchData(bodyData)))
-        } else if let bodyStream = request.httpBodyStream {
-            self.init(session: session, request: request, taskIdentifier: taskIdentifier, body: _Body.stream(bodyStream))
+        if let bodyData = urlRequest.httpBody {
+            urlRequest.setValue(String(bodyData.count), forHTTPHeaderField: "Content-Length") // Update content length
+            self.init(session: session, request: urlRequest, taskIdentifier: taskIdentifier, body: _Body.data(createDispatchData(bodyData)))
+        } else if let bodyStream = urlRequest.httpBodyStream {
+            self.init(session: session, request: urlRequest, taskIdentifier: taskIdentifier, body: _Body.stream(bodyStream))
         } else {
-            self.init(session: session, request: request, taskIdentifier: taskIdentifier, body: .none)
+            self.init(session: session, request: urlRequest, taskIdentifier: taskIdentifier, body: .none)
         }
     }
     internal init(session: URLSession, request: URLRequest, taskIdentifier: Int, body: _Body) {
@@ -392,30 +393,33 @@ internal extension URLSessionTask._Body {
 }
 
 fileprivate extension URLSessionTask {
-    class func inputStreamToData(_ inputStream: InputStream) -> Data {
+    class func inputStreamToData(_ inputStream: InputStream, contentLength: UInt) -> Data {
         var data = Data()
         let bufferSize = 1024
+        var avaibleContentLenght = Int(contentLength)
+
         let buffer = malloc(bufferSize).assumingMemoryBound(to: UInt8.self)
         while inputStream.hasBytesAvailable {
             let readBytes = inputStream.read(buffer, maxLength: bufferSize)
-            if readBytes > 0 {
-                data.append(buffer, count: readBytes)
+            if readBytes > 0 && avaibleContentLenght > 0 {
+                data.append(buffer, count: min(avaibleContentLenght, readBytes))
+                avaibleContentLenght -= readBytes
             }
         }
         free(buffer)
         return data
     }
 
-    class func containsContentLengthInHeader(_ request: URLRequest) -> Bool {
+    class func getContentLengthFromHeader(_ request: URLRequest) -> UInt? {
         if let headers = request.allHTTPHeaderFields {
 
-            for (key, _) in headers {
+            for (key, val) in headers {
                 if key.lowercased() == "content-length" {
-                    return true
+                    return UInt(val)
                 }
             }
         }
-        return false
+        return nil
     }
 }
 fileprivate func errorCode(fileSystemError error: Error) -> Int {
@@ -633,7 +637,6 @@ extension _ProtocolClient: URLProtocolClient {
                         error: nil,
                         sender: sender)
 
-                task.previousFailureCount += 1
                 urlProtocol(`protocol`, didReceive: authenticationChallenge)
                 return
             }
@@ -873,25 +876,24 @@ extension URLSessionTask {
     }
 }
 
-extension URLSessionTask {
-    public func setCredentials(_ credential: URLCredential) {
+private extension URLSessionTask {
+    func setCredentials(_ credential: URLCredential) {
         guard let httpUrlProtocol = _protocol as? _HTTPURLProtocol else {
             fatalError("protocol need to be an instance of _HTTPURLProtocol")
         }
         httpUrlProtocol.set(credential: credential)
     }
 
-    public func setAuthMethod(_ authMethod: String) -> Bool {
+    func setAuthMethod(_ authMethod: String) -> Bool {
         guard let httpUrlProtocol = _protocol as? _HTTPURLProtocol else {
             fatalError("protocol need to be an instance of _HTTPURLProtocol")
         }
         let status = httpUrlProtocol.set(authMethod: authMethod)
-        NSLog("Set auth method \(authMethod), status = \(status)")
 
         return status
     }
 
-    public func setTrustAllCertificates(_ trustAll: Bool) {
+    func setTrustAllCertificates(_ trustAll: Bool) {
         guard let httpUrlProtocol = _protocol as? _HTTPURLProtocol else {
             fatalError("protocol need to be an instance of _HTTPURLProtocol")
         }
