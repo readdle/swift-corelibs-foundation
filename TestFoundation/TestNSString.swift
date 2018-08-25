@@ -102,6 +102,7 @@ class TestNSString : XCTestCase {
             ("test_replacingOccurrences", test_replacingOccurrences),
             ("test_getLineStart", test_getLineStart),
             ("test_substringWithRange", test_substringWithRange),
+            ("test_commonPrefix", test_commonPrefix)
         ]
     }
 
@@ -1375,6 +1376,19 @@ extension TestNSString {
             }
             XCTAssert(test.xfail == fail, "Unexpected \(test.xfail ?"success":"failure"): \(test.loc)")
         }
+    }
+
+    func test_commonPrefix() {
+        XCTAssertEqual("".commonPrefix(with: ""), "")
+        XCTAssertEqual("1234567890".commonPrefix(with: ""), "")
+        XCTAssertEqual("".commonPrefix(with: "1234567890"), "")
+        XCTAssertEqual("abcba".commonPrefix(with: "abcde"), "abc")
+        XCTAssertEqual("/path/to/file1".commonPrefix(with: "/path/to/file2"), "/path/to/file")
+        XCTAssertEqual("/a_really_long_path/to/a/file".commonPrefix(with: "/a_really_long_path/to/the/file"), "/a_really_long_path/to/")
+        XCTAssertEqual("Ma\u{308}dchen".commonPrefix(with: "Mädchenschule"), "Ma\u{308}dchen")
+        XCTAssertEqual("this".commonPrefix(with: "THAT", options: [.caseInsensitive]), "th")
+        XCTAssertEqual("this".commonPrefix(with: "THAT", options: [.caseInsensitive, .literal]), "th")
+        XCTAssertEqual("Ma\u{308}dchen".commonPrefix(with: "Mädchenschule", options: [.literal]), "M")
     }
 }
 
