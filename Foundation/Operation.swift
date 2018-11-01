@@ -413,7 +413,15 @@ open class OperationQueue: NSObject {
                     __concurrencyGate = DispatchSemaphore(value:maxConcurrentOperationCount)
                 }
             }
-            let queue = DispatchQueue(label: effectiveName, attributes: attr)
+            let qos: DispatchQoS
+            switch qualityOfService {
+            case .background: qos = DispatchQoS(qosClass: .background, relativePriority: 0)
+            case .`default`: qos = DispatchQoS(qosClass: .`default`, relativePriority: 0)
+            case .userInitiated: qos = DispatchQoS(qosClass: .userInitiated, relativePriority: 0)
+            case .userInteractive: qos = DispatchQoS(qosClass: .userInteractive, relativePriority: 0)
+            case .utility: qos = DispatchQoS(qosClass: .utility, relativePriority: 0)
+            }
+            let queue = DispatchQueue(label: effectiveName, qos: qos, attributes: attr)
             __underlyingQueue = queue
             lock.unlock()
             return queue
