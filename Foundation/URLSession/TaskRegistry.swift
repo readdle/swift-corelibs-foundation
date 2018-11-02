@@ -86,6 +86,15 @@ extension URLSession._TaskRegistry {
             allTasksFinished()
         }
     }
+    
+    /// Cancel all tasks
+    ///
+    /// - Note: This must **only** be accessed on the owning session's work queue.
+    func cancelAllTasks() {
+        for (_, task) in self.tasks {
+            task._cancel()
+        }
+    }
 
     func notify(on tasksCompetion: @escaping () -> Void) {
         tasksFinishedCallback = tasksCompetion
