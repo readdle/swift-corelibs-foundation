@@ -182,14 +182,7 @@ open class URLSessionTask : NSObject, NSCopying {
      */
     open func cancel() {
         workQueue.sync {
-            guard self.state == .running || self.state == .suspended else { return }
-            self.state = .canceling
-            self.workQueue.async {
-                let urlError = URLError(_nsError: NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled, userInfo: nil))
-                self.error = urlError
-                self._protocol?.stopLoading()
-                self._protocol?.client?.urlProtocol(self._protocol!, didFailWithError: urlError)
-            }
+            self._cancel()
         }
     }
     
@@ -303,6 +296,21 @@ open class URLSessionTask : NSObject, NSCopying {
         }
     }
     fileprivate var _priority: Float = URLSessionTask.defaultPriority
+}
+
+internal extension URLSessionTask {
+    
+    func _cancel() {
+        guard self.state == .running || self.state == .suspended else { return }
+        self.state = .canceling
+        self.workQueue.async {
+            let urlError = URLError(_nsError: NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled, userInfo: nil))
+            self.error = urlError
+            self._protocol?.stopLoading()
+            self._protocol?.client?.urlProtocol(self._protocol!, didFailWithError: urlError)
+        }
+    }
+    
 }
 
 extension URLSessionTask {

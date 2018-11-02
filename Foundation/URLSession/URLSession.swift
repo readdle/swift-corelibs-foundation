@@ -316,7 +316,32 @@ open class URLSession : NSObject {
      * cancellation is subject to the state of the task, and some tasks may
      * have already have completed at the time they are sent -cancel.
      */
-    open func invalidateAndCancel() { NSUnimplemented() }
+    open func invalidateAndCancel() {
+        //we need to return immediately
+        workQueue.async {
+            
+            //don't allow creation of new tasks from this point onwards
+            self.invalidated = true
+            
+            let invalidateSessionCallback = { [weak self] in
+                //invoke the delegate method and break the delegate link
+                guard let `self` = self, let sessionDelegate = self.delegate else { return }
+                self.delegateQueue.addOperation {
+                    sessionDelegate.urlSession(self, didBecomeInvalidWithError: nil)
+                    self.delegate = nil
+                }
+            }
+            
+            //wait for running tasks to finish
+            if !self.taskRegistry.isEmpty {
+                self.taskRegistry.notify(on: invalidateSessionCallback)
+                self.taskRegistry.cancelAllTasks()
+            } else {
+                invalidateSessionCallback()
+            }
+        }
+        
+    }
     
     open func reset(completionHandler: @escaping () -> Void) { NSUnimplemented() } /* empty all cookies, cache and credential stores, removes disk files, issues -flushWithCompletionHandler:. Invokes completionHandler() on the delegate queue if not nil. */
     
