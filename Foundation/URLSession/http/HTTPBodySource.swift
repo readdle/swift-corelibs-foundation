@@ -130,13 +130,15 @@ extension _HTTPBodyStreamSource: _HTTPBodySource {
             }
             let readBytes = self.inputStream.read(pointer, maxLength: length)
             if readBytes > 0 {
-                let dispatchData = DispatchData(bytes: UnsafeRawBufferPointer(buffer))
+                let dispatchData = DispatchData(bytesNoCopy: UnsafeRawBufferPointer(buffer), deallocator: .free)
                 return .data(dispatchData.subdata(in: 0 ..< readBytes))                
             }
             else if readBytes == 0 {
+                buffer.deallocate()
                 return .done
             }
             else {
+                buffer.deallocate()
                 return .error
             }
         }
