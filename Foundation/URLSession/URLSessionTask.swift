@@ -617,7 +617,8 @@ extension _ProtocolClient: URLProtocolClient {
         guard let session = task.session as? URLSession else { fatalError("session cannot be nil") }
         guard let response = task.response as? HTTPURLResponse else { fatalError("No response") }
 
-        if response.statusCode == 401 {
+
+        if response.statusCode == 401, `protocol`.containsTaskDelegate() {
             // Concat protection space from header with all possibles protection spaces
             if !task.protectionSpacesInited { // init protection spaces
                 var allPossibleProtectionSpaces = AuthProtectionSpace.createAllPossible(using: response)
@@ -780,7 +781,7 @@ extension _ProtocolClient: URLProtocolClient {
         }
         let certificateErrors = [NSURLErrorServerCertificateUntrusted, NSURLErrorServerCertificateWrongHost]
 
-        if certificateErrors.contains(error._code) {
+        if certificateErrors.contains(error._code) && `protocol`.containsTaskDelegate() {
             let protectionSpace = URLProtectionSpace(host: "",
                     port: 443,
                     protocol: "https",
@@ -797,10 +798,9 @@ extension _ProtocolClient: URLProtocolClient {
 
                 task.previousFailureCount += 1
                 urlProtocol(`protocol`, didReceive: authenticationChallenge)
+                return
             }
-            return
         }
-
         urlProtocol(task: task, didFailWithError: error)
     }
 
@@ -898,6 +898,21 @@ private extension URLSessionTask {
             fatalError("protocol need to be an instance of _HTTPURLProtocol")
         }
         httpUrlProtocol.set(trustAllCertificates: trustAll)
+    }
+}
+
+fileprivate extension URLProtocol {
+    func containsTaskDelegate() -> Bool {
+        guard let task = self.task else { return false }
+        guard let session = task.session as? URLSession else { return false }
+
+        switch session.behaviour(for: task) {
+        case .taskDelegate(_):
+            return true
+
+        default:
+            return false
+        }
     }
 }
 
