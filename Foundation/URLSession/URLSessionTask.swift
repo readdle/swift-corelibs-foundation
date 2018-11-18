@@ -650,7 +650,7 @@ extension _ProtocolClient: URLProtocolClient {
                     }
                 }
             }
-        default: return 
+        default: return
         }
     }
 
