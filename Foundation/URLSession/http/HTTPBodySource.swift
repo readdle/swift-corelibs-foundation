@@ -126,6 +126,7 @@ extension _HTTPBodyStreamSource: _HTTPBodySource {
         if inputStream.hasBytesAvailable {
             let buffer = UnsafeMutableRawBufferPointer.allocate(count: length)
             guard let pointer = buffer.baseAddress?.assumingMemoryBound(to: UInt8.self) else {
+                buffer.deallocate()
                 return .error
             }
             let readBytes = self.inputStream.read(pointer, maxLength: length)
