@@ -124,9 +124,9 @@ open class Operation : NSObject {
             return
         }
         lock.lock()
+        _depGroup.enter()
         _ready = false
         _dependencies.insert(op)
-        _depGroup.enter()
         op._groups.append(_depGroup)
         lock.unlock()
         op.lock.unlock()
