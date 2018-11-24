@@ -22,9 +22,9 @@ open class Operation : NSObject {
             if _ready == true && newValue == false {
                 _depGroup.notify(queue: DispatchQueue.global(), execute: { [weak self] in
                     if let op = self {
-                        op.lock.lock()
-                        op._ready = true
-                        op.lock.unlock()
+                        op.lock.synchronized {
+                            op._ready = true
+                        }
                         op._queue?._runOperations()
                     }
                 })
@@ -50,22 +50,22 @@ open class Operation : NSObject {
     
     open func start() {
         if !isCancelled {
-            lock.lock()
-            _executing = true
-            lock.unlock()
+            lock.synchronized {
+                _executing = true
+            }
             main()
-            lock.lock()
-            _executing = false
-            lock.unlock()
+            lock.synchronized {
+                _executing = false
+            }
         }
         finish()
     }
     
     internal func finish() {
-        lock.lock()
-        _finished = true
-        _leaveGroups()
-        lock.unlock()
+        lock.synchronized {
+            _finished = true
+            _leaveGroups()
+        }
         if let queue = _queue {
             queue._operationFinished(self)
         }
@@ -81,7 +81,7 @@ open class Operation : NSObject {
     open func main() { }
     
     open var isCancelled: Bool {
-        return _cancelled
+        return lock.synchronized { _cancelled }
     }
     
     open func cancel() {
@@ -90,22 +90,17 @@ open class Operation : NSObject {
         // actual canceling work. Eventually main() will invoke finish() and this is
         // where we then leave the groups and unblock other operations that might
         // depend on us.
-        lock.lock()
-        _cancelled = true
-        lock.unlock()
+        lock.synchronized {
+            _cancelled = true
+        }
     }
     
     open var isExecuting: Bool {
-        let wasExecuting: Bool
-        lock.lock()
-        wasExecuting = _executing
-        lock.unlock()
-
-        return wasExecuting
+        return lock.synchronized { _executing }
     }
     
     open var isFinished: Bool {
-        return _finished
+        return lock.synchronized { _finished }
     }
     
     // - Note: This property is NEVER used in the objective-c implementation!
@@ -114,42 +109,40 @@ open class Operation : NSObject {
     }
     
     open var isReady: Bool {
-        return _ready
+        return lock.synchronized { _ready }
     }
     
     open func addDependency(_ op: Operation) {
-        op.lock.lock()
-        if op._finished {
-            op.lock.unlock()
-            return
+        op.lock.synchronized {
+            if op._finished {
+                return
+            }
+            lock.synchronized {
+                _depGroup.enter()
+                _ready = false
+                _dependencies.insert(op)
+                op._groups.append(_depGroup)
+            }
         }
-        lock.lock()
-        _depGroup.enter()
-        _ready = false
-        _dependencies.insert(op)
-        op._groups.append(_depGroup)
-        lock.unlock()
-        op.lock.unlock()
     }
     
     open func removeDependency(_ op: Operation) {
-        lock.lock()
-        _dependencies.remove(op)
-        op.lock.lock()
-        let groupIndex = op._groups.index(where: { $0 === self._depGroup })
-        if let idx = groupIndex {
-            let group = op._groups.remove(at: idx)
-            group.leave()
+        lock.synchronized {
+            _dependencies.remove(op)
+            op.lock.synchronized {
+                let groupIndex = op._groups.index(where: { $0 === self._depGroup })
+                if let idx = groupIndex {
+                    let group = op._groups.remove(at: idx)
+                    group.leave()
+                }
+            }
         }
-        op.lock.unlock()
-        lock.unlock()
     }
     
     open var dependencies: [Operation] {
-        lock.lock()
-        let ops = _dependencies.map() { $0 }
-        lock.unlock()
-        return ops
+        return lock.synchronized {
+            _dependencies.map() { $0 }
+        }
     }
     
     open var queuePriority: QueuePriority = .normal
@@ -209,25 +202,20 @@ open class BlockOperation: Operation {
     }
     
     override open func main() {
-        lock.lock()
-        let block = _block
-        let executionBlocks = _executionBlocks
-        lock.unlock()
+        let block = lock.synchronized { _block }
+        let executionBlocks = lock.synchronized { _executionBlocks }
         block()
         executionBlocks.forEach { $0() }
     }
     
     open func addExecutionBlock(_ block: @escaping () -> Void) {
-        lock.lock()
-        _executionBlocks.append(block)
-        lock.unlock()
+        lock.synchronized {
+            _executionBlocks.append(block)
+        }
     }
     
     open var executionBlocks: [() -> Void] {
-        lock.lock()
-        let blocks = _executionBlocks
-        lock.unlock()
-        return blocks
+        return lock.synchronized { _executionBlocks }
     }
 }
 
@@ -392,15 +380,15 @@ open class OperationQueue: NSObject {
     private var _operationMaxCount = Int.max
     
     fileprivate func _runOperations() {
-        lock.lock()
-        while !_suspended && _operationCount < _operationMaxCount, let op = _operations.dequeueIfReady() {
-            let block = DispatchWorkItem(flags: .enforceQoS) {
-                op.start()
+        lock.synchronized {
+            while !_suspended && _operationCount < _operationMaxCount, let op = _operations.dequeueIfReady() {
+                let block = DispatchWorkItem(flags: .enforceQoS) {
+                    op.start()
+                }
+                _operationCount += 1
+                _underlyingQueue.async(group: queueGroup, execute: block)
             }
-            _operationCount += 1
-            _underlyingQueue.async(group: queueGroup, execute: block)
         }
-        lock.unlock()
     }
     
     open func addOperations(_ ops: [Operation], waitUntilFinished wait: Bool) {
@@ -408,18 +396,18 @@ open class OperationQueue: NSObject {
         if wait {
             waitGroup = DispatchGroup()
         }
-        lock.lock()
-        ops.forEach { (operation: Operation) -> Void in
-            operation._queue = self
-            _operations.insert(operation)
-            if let waitGroup = waitGroup {
-                waitGroup.enter()
-                operation.lock.lock()
-                operation._groups.append(waitGroup)
-                operation.lock.unlock()
+        lock.synchronized {
+            ops.forEach { (operation: Operation) -> Void in
+                operation._queue = self
+                _operations.insert(operation)
+                if let waitGroup = waitGroup {
+                    waitGroup.enter()
+                    operation.lock.lock()
+                    operation._groups.append(waitGroup)
+                    operation.lock.unlock()
+                }
             }
         }
-        lock.unlock()
         self._runOperations()
         if let group = waitGroup {
             group.wait()
@@ -427,11 +415,11 @@ open class OperationQueue: NSObject {
     }
     
     internal func _operationFinished(_ operation: Operation) {
-        lock.lock()
-        _operations.remove(operation)
-        _operationCount -= 1
-        operation._queue = nil
-        lock.unlock()
+        lock.synchronized {
+            _operations.remove(operation)
+            _operationCount -= 1
+            operation._queue = nil
+        }
         _runOperations()
     }
     
@@ -443,18 +431,14 @@ open class OperationQueue: NSObject {
     
     // WARNING: the return value of this property can never be used to reliably do anything sensible
     open var operations: [Operation] {
-        lock.lock()
-        let ops = _operations.map() { $0 }
-        lock.unlock()
-        return ops
+        return lock.synchronized {
+            _operations.map() { $0 }
+        }
     }
     
     // WARNING: the return value of this property can never be used to reliably do anything sensible
     open var operationCount: Int {
-        lock.lock()
-        let count = _operations.count
-        lock.unlock()
-        return count
+        return lock.synchronized { _operations.count }
     }
     
     open var maxConcurrentOperationCount: Int {
@@ -462,9 +446,9 @@ open class OperationQueue: NSObject {
             return _operationMaxCount
         }
         set {
-            lock.lock()
-            _operationMaxCount = newValue
-            lock.unlock()
+            lock.synchronized {
+                _operationMaxCount = newValue
+            }
         }
     }
     
@@ -474,11 +458,11 @@ open class OperationQueue: NSObject {
             return _suspended
         }
         set {
-            lock.lock()
-            if _suspended != newValue {
-                _suspended = newValue
+            lock.synchronized {
+                if _suspended != newValue {
+                    _suspended = newValue
+                }
             }
-            lock.unlock()
             if newValue == false {
                 _runOperations()
             }
@@ -488,16 +472,13 @@ open class OperationQueue: NSObject {
     internal var _name: String?
     open var name: String? {
         get {
-            lock.lock()
-            let val = _name
-            lock.unlock()
-            return val
+            return lock.synchronized { _name }
         }
         set {
-            lock.lock()
-            _name = newValue
-            __underlyingQueue = nil
-            lock.unlock()
+            lock.synchronized {
+                _name = newValue
+                __underlyingQueue = nil
+            }
         }
     }
     
@@ -507,22 +488,19 @@ open class OperationQueue: NSObject {
     // it uses a target queue assignment instead of returning the actual underlying queue.
     open var underlyingQueue: DispatchQueue? {
         get {
-            lock.lock()
-            let queue = __underlyingQueue
-            lock.unlock()
-            return queue
+            return lock.synchronized { __underlyingQueue }
         }
         set {
-            lock.lock()
-            __underlyingQueue = newValue
-            lock.unlock()
+            lock.synchronized {
+                __underlyingQueue = newValue
+            }
         }
     }
     
     open func cancelAllOperations() {
-        lock.lock()
-        let ops = _operations.map() { $0 }
-        lock.unlock()
+        let ops = lock.synchronized {
+          _operations.map() { $0 }
+        }
         ops.forEach() { $0.cancel() }
     }
     
