@@ -12,40 +12,28 @@ import Dispatch
 import CoreFoundation
 
 open class Operation : NSObject {
+    
+    private typealias OperationCompletionBlock = ((_:Operation) -> Void)
+    
     let lock = NSLock()
-    internal weak var _queue: OperationQueue?
+    internal weak var _queue: OperationQueue? {
+        willSet {
+            assert(_queue == nil || newValue == nil, "Operation already added to other queue")
+
+        }
+    }
     internal var _cancelled = false
     internal var _executing = false
     internal var _finished = false
-    internal var _ready = true {
-        willSet {
-            if _ready == true && newValue == false {
-                _depGroup.notify(queue: DispatchQueue.global(), execute: { [weak self] in
-                    if let op = self {
-                        op.lock.synchronized {
-                            op._ready = true
-                        }
-                        op._queue?._runOperations()
-                    }
-                })
-            }
-        }
-    }
+    internal var _ready = true
     internal var _dependencies = Set<Operation>()
-    internal var _group = DispatchGroup()
-    internal var _depGroup = DispatchGroup()
-    internal var _groups = [DispatchGroup]()
+    internal var _waitGroup: DispatchGroup?
+    internal var _queueWaitGroup: DispatchGroup?
+    
+    private var _dependencyCompletionBlocks = [OperationCompletionBlock]()
     
     public override init() {
         super.init()
-        _group.enter()
-    }
-    
-    internal func _leaveGroups() {
-        // assumes lock is taken
-        _groups.forEach() { $0.leave() }
-        _groups.removeAll()
-        _group.leave()
     }
     
     open func start() {
@@ -64,7 +52,13 @@ open class Operation : NSObject {
     internal func finish() {
         lock.synchronized {
             _finished = true
-            _leaveGroups()
+            _waitGroup?.leave()
+            _waitGroup = nil
+            _queueWaitGroup?.leave()
+            _dependencyCompletionBlocks.forEach {
+                $0(self)
+            }
+            _dependencyCompletionBlocks.removeAll()
         }
         if let queue = _queue {
             queue._operationFinished(self)
@@ -118,10 +112,11 @@ open class Operation : NSObject {
                 return
             }
             lock.synchronized {
-                _depGroup.enter()
                 _ready = false
                 _dependencies.insert(op)
-                op._groups.append(_depGroup)
+            }
+            op._dependencyCompletionBlocks.append { [weak self] completedOperation in
+                self?.removeDependency(completedOperation)
             }
         }
     }
@@ -129,13 +124,12 @@ open class Operation : NSObject {
     open func removeDependency(_ op: Operation) {
         lock.synchronized {
             _dependencies.remove(op)
-            op.lock.synchronized {
-                let groupIndex = op._groups.index(where: { $0 === self._depGroup })
-                if let idx = groupIndex {
-                    let group = op._groups.remove(at: idx)
-                    group.leave()
-                }
+            if _dependencies.count == 0 {
+                _ready = true
             }
+        }
+        if _dependencies.count == 0 {
+            _queue?._runOperations()
         }
     }
     
@@ -148,7 +142,14 @@ open class Operation : NSObject {
     open var queuePriority: QueuePriority = .normal
     public var completionBlock: (() -> Void)?
     open func waitUntilFinished() {
-        _group.wait()
+        lock.synchronized {
+            if !isFinished && _waitGroup == nil {
+                _waitGroup = DispatchGroup()
+                _waitGroup?.enter()
+            }
+        }
+        // if operation already finished `_waitGroup` should be nil
+        _waitGroup?.wait()
     }
     
     open var threadPriority: Double = 0.5
@@ -157,11 +158,6 @@ open class Operation : NSObject {
     open var qualityOfService: QualityOfService = .default
     
     open var name: String?
-    
-    internal func _waitUntilReady() {
-        _depGroup.wait()
-        _ready = true
-    }
 }
 
 /// The following two methods are added to provide support for Operations which
@@ -281,7 +277,7 @@ internal struct _OperationList {
         }
 
         for (i, operation) in operations.enumerated() {
-            if operation.lock.synchronized({ operation._ready }) {
+            if operation.isReady {
                 operations.remove(at: i)
                 return operation
             }
@@ -398,19 +394,21 @@ open class OperationQueue: NSObject {
         }
         lock.synchronized {
             ops.forEach { (operation: Operation) -> Void in
-                operation._queue = self
-                _operations.insert(operation)
-                if let waitGroup = waitGroup {
-                    waitGroup.enter()
-                    operation.lock.lock()
-                    operation._groups.append(waitGroup)
-                    operation.lock.unlock()
+                operation.lock.synchronized {
+                    assert(operation._finished == false, "Operation already finished")
+                    assert(operation._executing == false, "Operation already started")
+                    operation._queue = self
+                    if let waitGroup = waitGroup {
+                        waitGroup.enter()
+                        operation._queueWaitGroup = waitGroup
+                    }
                 }
+                _operations.insert(operation)
             }
         }
         self._runOperations()
-        if let group = waitGroup {
-            group.wait()
+        if let waitGroup = waitGroup {
+            waitGroup.wait()
         }
     }
     
@@ -443,11 +441,15 @@ open class OperationQueue: NSObject {
     
     open var maxConcurrentOperationCount: Int {
         get {
-            return _operationMaxCount
+            return lock.synchronized { _operationMaxCount }
         }
         set {
+            let oldValue = _operationMaxCount
             lock.synchronized {
                 _operationMaxCount = newValue
+            }
+            if oldValue < _operationMaxCount {
+                _runOperations()
             }
         }
     }
@@ -455,7 +457,7 @@ open class OperationQueue: NSObject {
     internal var _suspended = false
     open var isSuspended: Bool {
         get {
-            return _suspended
+            return lock.synchronized { _suspended }
         }
         set {
             lock.synchronized {
