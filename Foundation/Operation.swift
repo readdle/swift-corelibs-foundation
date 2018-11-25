@@ -106,6 +106,9 @@ open class Operation : NSObject {
     }
     
     open func addDependency(_ op: Operation) {
+        assert(!isFinished, "Operarion already finished")
+        assert(!isCancelled, "Operarion already canceled")
+        assert(!isExecuting, "Operarion already started")
         op.lock.synchronized {
             if op._finished {
                 return
