@@ -13,24 +13,23 @@ import CoreFoundation
 
 open class Operation : NSObject {
     
-    private typealias OperationCompletionBlock = ((_:Operation) -> Void)
+    fileprivate typealias OperationCompletionBlock = ((_:Operation) -> Void)
     
-    let lock = NSLock()
-    internal weak var _queue: OperationQueue? {
+    fileprivate let lock = NSLock()
+    fileprivate weak var _queue: OperationQueue? {
         willSet {
             assert(_queue == nil || newValue == nil, "Operation already added to other queue")
 
         }
     }
-    internal var _cancelled = false
-    internal var _executing = false
-    internal var _finished = false
-    internal var _ready = true
-    internal var _dependencies = Set<Operation>()
-    internal var _waitGroup: DispatchGroup?
-    internal var _queueWaitGroup: DispatchGroup?
-    
-    private var _dependencyCompletionBlocks = [OperationCompletionBlock]()
+    fileprivate var _cancelled = false
+    fileprivate var _executing = false
+    fileprivate var _finished = false
+    fileprivate var _ready = true
+    fileprivate var _dependencies = Set<Operation>()
+    fileprivate var _waitGroup: DispatchGroup?
+    fileprivate var _queueWaitGroup: DispatchGroup?
+    fileprivate var _dependencyCompletionBlocks = [OperationCompletionBlock]()
     
     public override init() {
         super.init()
@@ -193,8 +192,8 @@ extension Operation {
 
 open class BlockOperation: Operation {
     typealias ExecutionBlock = () -> Void
-    internal var _block: () -> Void
-    internal var _executionBlocks = [ExecutionBlock]()
+    fileprivate var _block: () -> Void
+    fileprivate var _executionBlocks = [ExecutionBlock]()
     
     public init(block: @escaping () -> Void) {
         _block = block
@@ -222,7 +221,7 @@ public extension OperationQueue {
     public static let defaultMaxConcurrentOperationCount: Int = Int.max
 }
 
-internal struct _OperationList {
+fileprivate struct _OperationList {
     var veryLow = [Operation]()
     var low = [Operation]()
     var normal = [Operation]()
@@ -318,17 +317,16 @@ internal struct _OperationList {
 }
 
 open class OperationQueue: NSObject {
-    let lock = NSLock()
-    var __underlyingQueue: DispatchQueue? {
+    fileprivate let lock = NSLock()
+    fileprivate var __underlyingQueue: DispatchQueue? {
         didSet {
             let key = OperationQueue.OperationQueueKey
             oldValue?.setSpecific(key: key, value: nil)
             __underlyingQueue?.setSpecific(key: key, value: Unmanaged.passUnretained(self))
         }
     }
-    let queueGroup = DispatchGroup()
-    
-    var _operations = _OperationList()
+    fileprivate let queueGroup = DispatchGroup()
+    fileprivate var _operations = _OperationList()
 
     // This is NOT the behavior of the objective-c variant; it will never re-use a queue and instead for every operation it will create a new one.
     // However this is considerably faster and probably more effecient.
@@ -416,7 +414,7 @@ open class OperationQueue: NSObject {
         }
     }
     
-    internal func _operationFinished(_ operation: Operation) {
+    fileprivate func _operationFinished(_ operation: Operation) {
         lock.synchronized {
             queueGroup.leave()
             _operations.remove(operation)
@@ -459,7 +457,7 @@ open class OperationQueue: NSObject {
         }
     }
     
-    internal var _suspended = false
+    fileprivate var _suspended = false
     open var isSuspended: Bool {
         get {
             return lock.synchronized { _suspended }
@@ -476,7 +474,7 @@ open class OperationQueue: NSObject {
         }
     }
     
-    internal var _name: String?
+    fileprivate var _name: String?
     open var name: String? {
         get {
             return lock.synchronized { _name }
@@ -515,7 +513,7 @@ open class OperationQueue: NSObject {
         queueGroup.wait()
     }
     
-    static let OperationQueueKey = DispatchSpecificKey<Unmanaged<OperationQueue>>()
+    fileprivate static let OperationQueueKey = DispatchSpecificKey<Unmanaged<OperationQueue>>()
 
     open class var current: OperationQueue? {
         guard let specific = DispatchQueue.getSpecific(key: OperationQueue.OperationQueueKey) else {
