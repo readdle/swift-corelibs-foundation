@@ -143,7 +143,7 @@ open class Operation : NSObject {
     public var completionBlock: (() -> Void)?
     open func waitUntilFinished() {
         lock.synchronized {
-            if !isFinished && _waitGroup == nil {
+            if !_finished && _waitGroup == nil {
                 _waitGroup = DispatchGroup()
                 _waitGroup?.enter()
             }
@@ -382,7 +382,7 @@ open class OperationQueue: NSObject {
                     op.start()
                 }
                 _operationCount += 1
-                _underlyingQueue.async(group: queueGroup, execute: block)
+                _underlyingQueue.async(execute: block)
             }
         }
     }
@@ -403,6 +403,7 @@ open class OperationQueue: NSObject {
                         operation._queueWaitGroup = waitGroup
                     }
                 }
+                queueGroup.enter()
                 _operations.insert(operation)
             }
         }
@@ -414,6 +415,7 @@ open class OperationQueue: NSObject {
     
     internal func _operationFinished(_ operation: Operation) {
         lock.synchronized {
+            queueGroup.leave()
             _operations.remove(operation)
             _operationCount -= 1
             operation._queue = nil

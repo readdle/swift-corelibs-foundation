@@ -39,6 +39,8 @@ class TestOperationQueue : XCTestCase {
             ("test_suspended2", test_suspended2),
             ("test_operations_order", test_operations_order),
             ("test_operations_order2", test_operations_order2),
+            ("test_wait_until_finished", test_wait_until_finished),
+            ("test_wait_until_finished_operation", test_wait_until_finished_operation),
         ]
     }
     
@@ -418,6 +420,30 @@ class TestOperationQueue : XCTestCase {
         queue.waitUntilAllOperationsAreFinished()
         
         XCTAssertEqual(array, [5, 4, 3, 2, 1])
+    }
+    
+    func test_wait_until_finished() {
+        let queue1 = OperationQueue()
+        let queue2 = OperationQueue()
+        
+        let op1 = BlockOperation { sleep(1) }
+        let op2 = BlockOperation { }
+        
+        op2.addDependency(op1)
+        
+        queue1.addOperation(op1)
+        queue2.addOperation(op2)
+        
+        queue2.waitUntilAllOperationsAreFinished()
+        XCTAssertEqual(queue2.operationCount, 0)
+    }
+    
+    func test_wait_until_finished_operation() {
+        let queue1 = OperationQueue()
+        let op1 = BlockOperation { sleep(1) }
+        queue1.addOperation(op1)
+        op1.waitUntilFinished()
+        XCTAssertEqual(queue1.operationCount, 0)
     }
 }
 
