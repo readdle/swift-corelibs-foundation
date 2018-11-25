@@ -122,13 +122,16 @@ open class Operation : NSObject {
     }
     
     open func removeDependency(_ op: Operation) {
-        lock.synchronized {
-            _dependencies.remove(op)
+        let isOperationRemoved: Bool = lock.synchronized {
+            guard _dependencies.remove(op) != nil else {
+                return false
+            }
             if _dependencies.count == 0 {
                 _ready = true
             }
+            return true
         }
-        if _dependencies.count == 0 {
+        if isOperationRemoved && _dependencies.count == 0 {
             _queue?._runOperations()
         }
     }
