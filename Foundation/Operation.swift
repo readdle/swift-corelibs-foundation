@@ -19,7 +19,6 @@ open class Operation : NSObject {
     fileprivate weak var _queue: OperationQueue? {
         willSet {
             assert(_queue == nil || newValue == nil, "Operation already added to other queue")
-
         }
     }
     fileprivate var _cancelled = false
@@ -83,8 +82,20 @@ open class Operation : NSObject {
         // actual canceling work. Eventually main() will invoke finish() and this is
         // where we then leave the groups and unblock other operations that might
         // depend on us.
+        var isReadyChanged = false
         lock.synchronized {
             _cancelled = true
+            // In macOS 10.6 and later, if you cancel an operation while it is waiting on the completion of
+            // one or more dependent operations, those dependencies are thereafter ignored and the
+            // value of this property is updated to reflect that it is now ready to run. This behavior gives
+            // an operation queue the chance to flush cancelled operations out of its queue more quickly.
+            if _ready == false {
+                _ready = true
+                isReadyChanged = true
+            }
+        }
+        if isReadyChanged {
+            didChangeValue(forKey: "isReady")
         }
     }
     
@@ -124,17 +135,20 @@ open class Operation : NSObject {
     }
     
     open func removeDependency(_ op: Operation) {
-        let isOperationRemoved: Bool = lock.synchronized {
+        var isReadyChanged = false
+        lock.synchronized {
             guard _dependencies.remove(op) != nil else {
-                return false
+                return
             }
             if _dependencies.count == 0 {
-                _ready = true
+                if _ready == false {
+                    _ready = true
+                    isReadyChanged = true
+                }
             }
-            return true
         }
-        if isOperationRemoved && _dependencies.count == 0 {
-            _queue?._runOperations()
+        if isReadyChanged {
+            didChangeValue(forKey: "isReady")
         }
     }
     
@@ -179,6 +193,9 @@ extension Operation {
     public func didChangeValue(forKey key: String) {
         if key == "isFinished" && isFinished {
             finish()
+        }
+        if key == "isReady" && isReady {
+            _queue?._runOperations()
         }
     }
 }

@@ -41,6 +41,8 @@ class TestOperationQueue : XCTestCase {
             ("test_operations_order2", test_operations_order2),
             ("test_wait_until_finished", test_wait_until_finished),
             ("test_wait_until_finished_operation", test_wait_until_finished_operation),
+            ("test_custom_ready_operation", test_custom_ready_operation),
+            ("test_mac_os_10_6_cancel_behavour", test_mac_os_10_6_cancel_behavour),
         ]
     }
     
@@ -444,6 +446,73 @@ class TestOperationQueue : XCTestCase {
         queue1.addOperation(op1)
         op1.waitUntilFinished()
         XCTAssertEqual(queue1.operationCount, 0)
+    }
+    
+    func test_custom_ready_operation() {
+        class CustomOperation: Operation {
+            
+            private var _isReady = false
+            
+            override var isReady: Bool {
+                return _isReady
+            }
+            
+            func setIsReady() {
+                willChangeValue(forKey: "isReady")
+                _isReady = true
+                didChangeValue(forKey: "isReady")
+            }
+            
+        }
+        
+        let expectation = self.expectation(description: "Operation should finish")
+        
+        let queue1 = OperationQueue()
+        let op1 = CustomOperation()
+        let op2 = BlockOperation(block: {
+            expectation.fulfill()
+        })
+        
+        queue1.addOperation(op1)
+        queue1.addOperation(op2)
+        
+        waitForExpectations(timeout: 1)
+        
+        XCTAssertEqual(queue1.operationCount, 1)
+        op1.setIsReady()
+        queue1.waitUntilAllOperationsAreFinished()
+        XCTAssertEqual(queue1.operationCount, 0)
+    }
+    
+    func test_mac_os_10_6_cancel_behavour() {
+        
+        let expectation1 = self.expectation(description: "Operation should finish")
+        let expectation2 = self.expectation(description: "Operation should finish")
+        
+        let queue1 = OperationQueue()
+        let op1 = BlockOperation(block: {
+            expectation1.fulfill()
+        })
+        let op2 = BlockOperation(block: {
+            expectation2.fulfill()
+        })
+        let op3 = BlockOperation(block: {
+            // empty
+        })
+        
+        op1.addDependency(op2)
+        op2.addDependency(op3)
+        op3.addDependency(op1)
+        
+        queue1.addOperation(op1)
+        queue1.addOperation(op2)
+        queue1.addOperation(op3)
+        
+        XCTAssertEqual(queue1.operationCount, 3)
+        
+        op3.cancel()
+        
+        waitForExpectations(timeout: 1)
     }
 }
 
