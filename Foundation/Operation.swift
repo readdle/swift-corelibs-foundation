@@ -212,17 +212,14 @@ extension Operation {
 
 open class BlockOperation: Operation {
     typealias ExecutionBlock = () -> Void
-    fileprivate var _block: () -> Void
-    fileprivate var _executionBlocks = [ExecutionBlock]()
+    fileprivate var _executionBlocks: [ExecutionBlock]
     
     public init(block: @escaping () -> Void) {
-        _block = block
+        _executionBlocks = [block]
     }
     
     override open func main() {
-        let block = lock.synchronized { _block }
         let executionBlocks = lock.synchronized { _executionBlocks }
-        block()
         executionBlocks.forEach { $0() }
     }
     
@@ -347,6 +344,8 @@ open class OperationQueue: NSObject {
     }
     fileprivate let queueGroup = DispatchGroup()
     fileprivate var _operations = _OperationList()
+    fileprivate var _runningOperationCount = 0
+    fileprivate var _maxConcurrentOperationCount = Int.max
 
     // This is NOT the behavior of the objective-c variant; it will never re-use a queue and instead for every operation it will create a new one.
     // However this is considerably faster and probably more effecient.
@@ -393,16 +392,13 @@ open class OperationQueue: NSObject {
         addOperations([op], waitUntilFinished: false)
     }
     
-    private var _operationCount = 0
-    private var _operationMaxCount = Int.max
-    
     fileprivate func _runOperations() {
         lock.synchronized {
-            while !_suspended && _operationCount < _operationMaxCount, let op = _operations.dequeueIfReady() {
+            while !_suspended && _runningOperationCount < _maxConcurrentOperationCount, let op = _operations.dequeueIfReady() {
                 let block = DispatchWorkItem(flags: .enforceQoS) {
                     op.start()
                 }
-                _operationCount += 1
+                _runningOperationCount += 1
                 _underlyingQueue.async(execute: block)
             }
         }
@@ -438,7 +434,7 @@ open class OperationQueue: NSObject {
         lock.synchronized {
             queueGroup.leave()
             _operations.remove(operation)
-            _operationCount -= 1
+            _runningOperationCount -= 1
             operation._queue = nil
         }
         _runOperations()
@@ -464,14 +460,16 @@ open class OperationQueue: NSObject {
     
     open var maxConcurrentOperationCount: Int {
         get {
-            return lock.synchronized { _operationMaxCount }
+            return lock.synchronized { _maxConcurrentOperationCount }
         }
         set {
-            let oldValue = _operationMaxCount
-            lock.synchronized {
-                _operationMaxCount = newValue
+            let increasing: Bool = lock.synchronized {
+                let increasing = _maxConcurrentOperationCount < newValue
+                _maxConcurrentOperationCount = newValue
+                return increasing
             }
-            if oldValue < _operationMaxCount {
+            
+            if increasing {
                 _runOperations()
             }
         }
