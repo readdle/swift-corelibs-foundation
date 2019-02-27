@@ -395,8 +395,12 @@ open class OperationQueue: NSObject {
     fileprivate func _drainQueue() {
         lock.synchronized {
             while !_suspended && _runningOperationCount < _maxConcurrentOperationCount, let op = _operations.dequeueIfReady() {
-                let block = DispatchWorkItem(flags: .enforceQoS) {
-                    op.start()
+                let block = DispatchWorkItem(flags: .enforceQoS) { [weak op] in
+                    guard let strongOp = op else {
+                        assert(false)
+                        return
+                    }
+                    strongOp.start()
                 }
                 _runningOperationCount += 1
                 _underlyingQueue.async(execute: block)
