@@ -207,8 +207,14 @@ internal class _NativeProtocol: URLProtocol, _EasyHandleDelegate {
         }
 
         guard let response = ts.response else {
-            fatalError("Transfer completed, but there's no response.")
+            // This is a workaround, not a fix. Instead of fatalError, just failing current transfer.
+            // fatalError("Transfer completed, but there's no response.")
+            NSLog("Transfer completed, but there's no response. Transfer is failed.")
+            internalState = .transferFailed
+            failWith(error: NSError(domain: NSURLErrorDomain, code: NSURLErrorUnknown), request: request)
+            return
         }
+        
         internalState = .transferCompleted(response: response, bodyDataDrain: ts.bodyDataDrain)
         let action = completionAction(forCompletedRequest: request, response: response)
 
