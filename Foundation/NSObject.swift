@@ -152,7 +152,13 @@ open class NSObject : NSObjectProtocol, Equatable, Hashable {
     
     /// Implemented by subclasses to initialize a new object immediately after memory
     /// for it has been allocated.
-    public init() {}
+    public init() {
+        globalInitHook?(self)
+    }
+    
+    deinit {
+        globalDeinitHook?(self)
+    }
     
     /// Returns the object returned by `copy(with:)`.
     ///
@@ -345,3 +351,6 @@ extension NSObject : CustomDebugStringConvertible {
 
 extension NSObject : CustomStringConvertible {
 }
+
+public var globalInitHook: ((_ object: NSObject) -> Void)? = nil
+public var globalDeinitHook: ((_ object: NSObject) -> Void)? = nil
