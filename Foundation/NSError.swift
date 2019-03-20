@@ -121,7 +121,7 @@ open class NSError : NSObject, NSCopying, NSSecureCoding, NSCoding {
     open var localizedDescription: String {
         let desc = userInfo[NSLocalizedDescriptionKey] as? String
         
-        return desc ?? "The operation could not be completed"
+        return desc ?? "The operation could not be completed. (\(domain) error \(code).)"
     }
     
     open var localizedFailureReason: String? {
@@ -156,7 +156,14 @@ open class NSError : NSObject, NSCopying, NSSecureCoding, NSCoding {
     }
     
     override open var description: String {
-        return localizedDescription
+        let localizedDescription = userInfo[NSLocalizedDescriptionKey] ?? "(null)"
+        var result = "Error Domain=\(domain) Code=\(code) \"\(localizedDescription)\""
+
+        if let userInfo = _userInfo {
+            result += " UserInfo=\(NSDictionary(dictionary: userInfo))"
+        }
+
+        return result
     }
     
     // -- NSObject Overrides --
