@@ -214,7 +214,7 @@ internal class _NativeProtocol: URLProtocol, _EasyHandleDelegate {
             failWith(error: NSError(domain: NSURLErrorDomain, code: NSURLErrorUnknown), request: request)
             return
         }
-        
+
         internalState = .transferCompleted(response: response, bodyDataDrain: ts.bodyDataDrain)
         let action = completionAction(forCompletedRequest: request, response: response)
 
@@ -267,7 +267,7 @@ internal class _NativeProtocol: URLProtocol, _EasyHandleDelegate {
 
     func seekInputStream(to position: UInt64) throws {
         switch self.internalState {
-        case .transferReady(let currentTransferState):
+        case .transferReady(let currentTransferState), .transferInProgress(let currentTransferState):
             if currentTransferState.requestBodySource is _BodyStreamSource,
                let session = task?.session as? URLSession,
                let delegate = session.delegate as? URLSessionTaskDelegate,
