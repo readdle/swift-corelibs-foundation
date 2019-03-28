@@ -256,7 +256,10 @@ open class URLSessionTask : NSObject, NSCopying {
     open func resume() {
         workQueue.sync {
             self.suspendCount -= 1
-            guard 0 <= self.suspendCount else { fatalError("Resuming a task that's not suspended. Calls to resume() / suspend() need to be matched.") }
+            guard 0 <= self.suspendCount else {
+                assert(false, "Resuming a task that's not suspended. Calls to resume() / suspend() need to be matched.")
+                return
+            }
             self.updateTaskState()
             if self.suspendCount == 0 {
                 self.workQueue.async {
@@ -657,7 +660,10 @@ extension _ProtocolClient: URLProtocolClient {
     func urlProtocolDidFinishLoading(_ protocol: URLProtocol) {
         guard let task = `protocol`.task else { fatalError("task cannot be nil") }
         guard let session = task.session as? URLSession else { fatalError("session cannot be nil") }
-        guard let response = task.response as? HTTPURLResponse else { fatalError("No response") }
+        guard let response = task.response as? HTTPURLResponse else {
+            assert(false, "No response")
+            return
+        }
 
         
         if response.statusCode == 401, `protocol`.containsTaskDelegate() {
