@@ -584,7 +584,7 @@ extension _HTTPURLProtocol: _EasyHandleDelegate {
     
     func seekInputStream(to position: UInt64) throws {
         switch self.internalState {
-            case .transferReady(let currentTransferState):
+            case .transferReady(let currentTransferState), .transferInProgress(let currentTransferState):
                  if currentTransferState.requestBodySource is _HTTPBodyStreamSource,
                            let session = task?.session as? URLSession,
                            let delegate = session.delegate as? URLSessionTaskDelegate,
