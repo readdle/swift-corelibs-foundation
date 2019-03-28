@@ -828,9 +828,12 @@ public struct URLError : _BridgedStoredNSError {
         case cannotDecodeRawData = -1015
         case cannotDecodeContentData = -1016
         case cannotParseResponse = -1017
+        case appTransportSecurityRequiresSecureConnection = -1022
         case fileDoesNotExist = -1100
         case fileIsDirectory = -1101
         case noPermissionsToReadFile = -1102
+        case dataLengthExceedsMaximum = -1103
+        
         case secureConnectionFailed = -1200
         case serverCertificateHasBadDate = -1201
         case serverCertificateUntrusted = -1202
@@ -838,6 +841,8 @@ public struct URLError : _BridgedStoredNSError {
         case serverCertificateNotYetValid = -1204
         case clientCertificateRejected = -1205
         case clientCertificateRequired = -1206
+        case serverCertificateWrongHos = -1207
+        
         case cannotLoadFromNetwork = -2000
         case cannotCreateFile = -3000
         case cannotOpenFile = -3001
