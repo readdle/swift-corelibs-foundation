@@ -546,6 +546,10 @@ internal extension URLSession {
     }
 
     func behaviour(for task: URLSessionTask) -> _TaskBehaviour {
+        guard taskRegistry.containsBehaviour(for: task) else {
+            return .noDelegate
+        }
+        
         switch taskRegistry.behaviour(for: task) {
         case .dataCompletionHandler(let c): return .dataCompletionHandler(c)
         case .downloadCompletionHandler(let c): return .downloadCompletionHandler(c)
