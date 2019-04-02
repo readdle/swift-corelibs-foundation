@@ -25,7 +25,7 @@ func NSLocalizedString(_ key: String,
                        bundle: Bundle = Bundle.main,
                        value: String = "",
                        comment: String) -> String {
-#if os(WASI)
+#if os(WASI) || os(Android)
     return key
 #else
     return bundle.localizedString(forKey: key, value: value, table: tableName)
