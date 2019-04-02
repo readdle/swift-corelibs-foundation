@@ -27,7 +27,11 @@ func NSLocalizedString(_ key: String,
                        bundle: Bundle = Bundle.main,
                        value: String = "",
                        comment: String) -> String {
-    return bundle.localizedString(forKey: key, value: value, table: tableName)
+    #if os(Android)
+        return key
+    #else
+        return bundle.localizedString(forKey: key, value: value, table: tableName)
+    #endif
 }
 
 #if os(OSX) || os(iOS)
