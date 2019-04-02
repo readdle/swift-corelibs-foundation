@@ -115,4 +115,8 @@ extension URLSession._TaskRegistry {
         }
         return b
     }
+    
+    func containsBehaviour(for task: URLSessionTask) -> Bool {
+        return behaviours[task.taskIdentifier] != nil
+    }
 }
