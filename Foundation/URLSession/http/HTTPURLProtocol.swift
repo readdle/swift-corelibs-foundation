@@ -56,7 +56,7 @@ internal class _HTTPURLProtocol: URLProtocol {
             suspend()
         } else {
             self.internalState = .transferFailed
-            guard let error = self.task?.error else { fatalError() }
+            let error = self.task?.error ?? NSError(domain: NSURLErrorDomain, code: URLError.Code.unknown.rawValue)
             completeTask(withError: error)
         }
     }
