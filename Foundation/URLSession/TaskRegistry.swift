@@ -72,14 +72,19 @@ extension URLSession._TaskRegistry {
     func remove(_ task: URLSessionTask) {
         let identifier = task.taskIdentifier
         guard identifier != 0 else { fatalError("Invalid task identifier") }
-        guard let tasksIdx = tasks.index(forKey: identifier) else {
-            fatalError("Trying to remove task, but it's not in the registry.")
+        
+        if let tasksIdx = tasks.index(forKey: identifier) {
+            tasks.remove(at: tasksIdx)
+        } else {
+            NSLog("Trying to remove task, but it's not in the registry.")
         }
-        tasks.remove(at: tasksIdx)
-        guard let behaviourIdx = behaviours.index(forKey: identifier) else {
-            fatalError("Trying to remove task's behaviour, but it's not in the registry.")
+        
+        if let behaviourIdx = behaviours.index(forKey: identifier) {
+            behaviours.remove(at: behaviourIdx)
+        } else {
+            NSLog("Trying to remove task's behaviour, but it's not in the registry.")
         }
-        behaviours.remove(at: behaviourIdx)
+        
 
         guard let allTasksFinished = tasksFinishedCallback else { return }
         if self.isEmpty {
