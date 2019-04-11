@@ -640,9 +640,11 @@ extension _ProtocolClient: URLProtocolClient {
                         task.resume()
                     case .performDefaultHandling:
                         task.protectionSpaces = []
- 
-                        let error = challenge.error ?? NSError(domain: NSURLErrorDomain, code: NSURLErrorUnknown)
-                        self.urlProtocol(task: task, didFailWithError: error)
+
+                        session.workQueue.async {
+                            let error = challenge.error ?? NSError(domain: NSURLErrorDomain, code: NSURLErrorUnknown)
+                            self.urlProtocol(task: task, didFailWithError: error)
+                        }
                     case .rejectProtectionSpace:
                         session.workQueue.async {
                             task._protocol?.client?.urlProtocolDidFinishLoading(`protocol`)
@@ -708,9 +710,7 @@ extension _ProtocolClient: URLProtocolClient {
             }
         case .noDelegate:
             task.state = .completed
-            session.workQueue.async {
-                session.taskRegistry.remove(task)
-            }
+            session.taskRegistry.remove(task)
         case .dataCompletionHandler(let completion):
             session.delegateQueue.addOperation {
                 completion(`protocol`.properties[URLProtocol._PropertyKey.responseData] as? Data ?? Data(), task.response, nil)
@@ -798,9 +798,7 @@ extension _ProtocolClient: URLProtocolClient {
             }
         case .noDelegate:
             task.state = .completed
-            session.workQueue.async {
-                session.taskRegistry.remove(task)
-            }
+            session.taskRegistry.remove(task)
         case .dataCompletionHandler(let completion):
             session.delegateQueue.addOperation {
                 completion(nil, nil, error)
