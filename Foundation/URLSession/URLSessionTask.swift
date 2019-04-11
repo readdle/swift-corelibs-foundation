@@ -641,7 +641,7 @@ extension _ProtocolClient: URLProtocolClient {
                         proposedCredential: nil,
                         previousFailureCount: task.previousFailureCount,
                         failureResponse: response,
-                        error: nil,
+                        error: NSError(domain: NSURLErrorDomain, code: NSURLErrorUserAuthenticationRequired),
                         sender: sender)
 
                 urlProtocol(`protocol`, didReceive: authenticationChallenge)
@@ -721,6 +721,7 @@ extension _ProtocolClient: URLProtocolClient {
                         // URLCredentials holds credentials OR trustAllCertificates
                         if let credential = credential {
                             if let trust = credential._trustAllCertificated { // Trust field is set
+                                task.previousFailureCount = 0
                                 protocolTrust = trust
                             } else {
                                 protocolCredentials = credential
@@ -745,9 +746,8 @@ extension _ProtocolClient: URLProtocolClient {
                     case .performDefaultHandling:
                         task.protectionSpaces = []
 
-                        session.workQueue.async {
-                            task._protocol?.client?.urlProtocolDidFinishLoading(`protocol`)
-                        }
+                        let error = challenge.error ?? NSError(domain: NSURLErrorDomain, code: NSURLErrorUnknown)
+                        self.urlProtocol(task: task, didFailWithError: error)
                     case .rejectProtectionSpace:
                         session.workQueue.async {
                             task._protocol?.client?.urlProtocolDidFinishLoading(`protocol`)
