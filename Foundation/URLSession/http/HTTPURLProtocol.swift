@@ -745,6 +745,7 @@ extension _HTTPURLProtocol {
             fatalError("Trying to complete the task, but its transfer isn't complete.")
         }
         task?.response = response
+        task?.error = nil
 
         //We don't want a timeout to be triggered after this. The timeout timer needs to be cancelled.
         easyHandle.timeoutTimer = nil
