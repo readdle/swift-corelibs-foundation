@@ -738,7 +738,7 @@ extension _ProtocolClient: URLProtocolClient {
                             task.setTrustAllCertificates(trustAllCertificate)
                         }
 
-                        if !task.setAuthMethod(authScheme) {
+                        if authScheme != NSURLAuthenticationMethodServerTrust && !task.setAuthMethod(authScheme) {
                             NSLog("\(authScheme) is not supported")
                         }
 
