@@ -343,7 +343,7 @@ internal extension _HTTPURLProtocol {
                 NSUnderlyingErrorKey: error,
                 NSURLErrorFailingURLErrorKey: $0,
                 NSURLErrorFailingURLStringErrorKey: $0.absoluteString,
-                NSLocalizedDescriptionKey: NSLocalizedString(error.localizedDescription, comment: "N/A")
+                NSLocalizedDescriptionKey: error.localizedDescription
                 ]
         }
         let urlError = URLError(_nsError: NSError(domain: NSURLErrorDomain, code: error.code, userInfo: userInfo))
