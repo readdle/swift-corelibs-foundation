@@ -21,18 +21,22 @@ extension unichar : ExpressibleByUnicodeScalarLiteral {
 }
 
 /// Returns a localized string, using the main bundle if one is not specified.
-public
-func NSLocalizedString(_ key: String,
-                       tableName: String? = nil,
-                       bundle: Bundle = Bundle.main,
-                       value: String = "",
-                       comment: String) -> String {
-    #if os(Android)
-        return key
-    #else
-        return bundle.localizedString(forKey: key, value: value, table: tableName)
-    #endif
+#if os(Android)
+public func NSLocalizedString(_ key: String,
+                              tableName: String? = nil,
+                              value: String = "",
+                              comment: String) -> String {
+    return key
 }
+#else
+public func NSLocalizedString(_ key: String,
+                              tableName: String? = nil,
+                              bundle: Bundle = Bundle.main,
+                              value: String = "",
+                              comment: String) -> String {
+    return bundle.localizedString(forKey: key, value: value, table: tableName)
+}
+#endif
 
 #if os(OSX) || os(iOS)
 internal let kCFStringEncodingMacRoman =  CFStringBuiltInEncodings.macRoman.rawValue

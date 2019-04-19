@@ -197,7 +197,7 @@ fileprivate extension _HTTPURLProtocol {
             self?.completeTask(withError: urlError)
             self?.client?.urlProtocol(self!, didFailWithError: urlError)
         }
-	guard let task = self.task else { fatalError() }
+        guard let task = self.task else { fatalError() }
         easyHandle.timeoutTimer = _TimeoutSource(queue: task.workQueue, milliseconds: timeoutInterval, handler: timeoutHandler)
 
         easyHandle.set(automaticBodyDecompression: true)
@@ -344,7 +344,7 @@ internal extension _HTTPURLProtocol {
                 NSURLErrorFailingURLErrorKey: $0,
                 NSURLErrorFailingURLStringErrorKey: $0.absoluteString,
                 NSLocalizedDescriptionKey: error.localizedDescription
-                ]
+            ]
         }
         let urlError = URLError(_nsError: NSError(domain: NSURLErrorDomain, code: error.code, userInfo: userInfo))
         completeTask(withError: urlError)
