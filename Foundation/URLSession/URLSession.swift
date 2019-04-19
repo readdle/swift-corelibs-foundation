@@ -557,13 +557,16 @@ internal extension URLSession {
 
     func behaviour(for task: URLSessionTask) -> _TaskBehaviour {
         switch taskRegistry.behaviour(for: task) {
-        case .dataCompletionHandler(let c): return .dataCompletionHandler(c)
-        case .downloadCompletionHandler(let c): return .downloadCompletionHandler(c)
-        case .callDelegate:
+        case .dataCompletionHandler(let c)?: return .dataCompletionHandler(c)
+        case .downloadCompletionHandler(let c)?: return .downloadCompletionHandler(c)
+        case .callDelegate?:
             guard let d = delegate as? URLSessionTaskDelegate else {
                 return .noDelegate
             }
             return .taskDelegate(d)
+        case .none:
+            NSLog("Trying to access a behaviour for a task that in not in the registry.")
+            return .noDelegate
         }
     }
 }
