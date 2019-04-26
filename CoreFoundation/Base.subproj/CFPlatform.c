@@ -35,6 +35,10 @@
 
 #endif
 
+#if TARGET_OS_ANDROID
+#include <sys/prctl.h>
+#endif
+
 #if DEPLOYMENT_TARGET_MACOSX || DEPLOYMENT_TARGET_EMBEDDED || DEPLOYMENT_TARGET_EMBEDDED_MINI || DEPLOYMENT_TARGET_WINDOWS
 #define kCFPlatformInterfaceStringEncoding	kCFStringEncodingUTF8
 #else
@@ -1416,7 +1420,18 @@ CF_CROSS_PLATFORM_EXPORT int _CFThreadSetName(_CFThreadRef thread, const char *_
 CF_CROSS_PLATFORM_EXPORT int _CFThreadGetName(char *buf, int length) {
 #if DEPLOYMENT_TARGET_MACOSX || DEPLOYMENT_TARGET_EMBEDDED || DEPLOYMENT_TARGET_EMBEDDED_MINI
     return pthread_getname_np(pthread_self(), buf, length);
-#elif DEPLOYMENT_TARGET_LINUX
+#elif TARGET_OS_ANDROID
+    // Android did not get pthread_getname_np until API 26, but prctl seems to
+    // return at most 15 chars of the name + null terminator.
+    char *buffer[16] = {0};
+    if (prctl(PR_GET_NAME, buffer, 0, 0, 0) != 0) {
+        return -1;
+    }
+    size_t sz = MIN(strnlen(buffer, 15), length - 1);
+    memcpy(buf, buffer, sz);
+    buf[sz] = 0;
+    return 0;
+#elif TARGET_OS_LINUX
     return pthread_getname_np(pthread_self(), buf, length);
 #endif
     return -1;
@@ -1452,4 +1467,3 @@ CF_CROSS_PLATFORM_EXPORT void *_CFReallocf(void *ptr, size_t size) {
 }
 
 #endif
-
