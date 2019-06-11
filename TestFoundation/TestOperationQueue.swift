@@ -17,6 +17,8 @@ class TestOperationQueue : XCTestCase {
             ("test_AsyncOperation", test_AsyncOperation),
             ("test_isExecutingWorks", test_isExecutingWorks),
             ("test_MainQueueGetter", test_MainQueueGetter),
+            ("test_CancelOneOperation", test_CancelOneOperation),
+            ("test_CancelOperationsOfSpecificQueuePriority", test_CancelOperationsOfSpecificQueuePriority),
             ("test_CurrentQueueOnMainQueue", test_CurrentQueueOnMainQueue),
             ("test_CurrentQueueOnBackgroundQueue", test_CurrentQueueOnBackgroundQueue),
             ("test_CurrentQueueOnBackgroundQueueWithSelfCancel", test_CurrentQueueOnBackgroundQueueWithSelfCancel),
@@ -28,7 +30,7 @@ class TestOperationQueue : XCTestCase {
     
     func test_OperationCount() {
         let queue = OperationQueue()
-        let op1 = BlockOperation(block: { sleep(2) })
+        let op1 = BlockOperation(block: { Thread.sleep(forTimeInterval: 2) })
         queue.addOperation(op1)
         XCTAssertTrue(queue.operationCount == 1)
         queue.waitUntilAllOperationsAreFinished()
@@ -110,6 +112,75 @@ class TestOperationQueue : XCTestCase {
          There used to be a bug where subsequent OperationQueue.main call would return a "dangling pointer".
          */
         XCTAssertFalse(OperationQueue.main.isSuspended)
+    }
+    
+    func test_CancelOneOperation() {
+        var operations = [Operation]()
+        var valueOperations = [Int]()
+        for i in 0..<5 {
+            let operation = BlockOperation {
+                valueOperations.append(i)
+                Thread.sleep(forTimeInterval: 2)
+            }
+            operations.append(operation)
+        }
+        
+        let queue = OperationQueue()
+        queue.maxConcurrentOperationCount = 1
+        queue.addOperations(operations, waitUntilFinished: false)
+        operations.remove(at: 2).cancel()
+        queue.waitUntilAllOperationsAreFinished()
+        XCTAssertTrue(!valueOperations.contains(2))
+    }
+    
+    func test_CancelOperationsOfSpecificQueuePriority() {
+        var operations = [Operation]()
+        var valueOperations = [Int]()
+        
+        let operation1 = BlockOperation {
+            valueOperations.append(0)
+            Thread.sleep(forTimeInterval: 2)
+        }
+        operation1.queuePriority = .high
+        operations.append(operation1)
+        
+        let operation2 = BlockOperation {
+            valueOperations.append(1)
+            Thread.sleep(forTimeInterval: 2)
+        }
+        operation2.queuePriority = .high
+        operations.append(operation2)
+        
+        let operation3 = BlockOperation {
+            valueOperations.append(2)
+        }
+        operation3.queuePriority = .normal
+        operations.append(operation3)
+        
+        let operation4 = BlockOperation {
+            valueOperations.append(3)
+        }
+        operation4.queuePriority = .normal
+        operations.append(operation4)
+        
+        let operation5 = BlockOperation {
+            valueOperations.append(4)
+        }
+        operation5.queuePriority = .normal
+        operations.append(operation5)
+        
+        let queue = OperationQueue()
+        queue.maxConcurrentOperationCount = 1
+        queue.addOperations(operations, waitUntilFinished: false)
+        for operation in operations {
+            if operation.queuePriority == .normal {
+                operation.cancel()
+            }
+        }
+        queue.waitUntilAllOperationsAreFinished()
+        XCTAssertTrue(valueOperations.count == 2)
+        XCTAssertTrue(valueOperations[0] == 0)
+        XCTAssertTrue(valueOperations[1] == 1)
     }
     
     func test_CurrentQueueOnMainQueue() {
@@ -203,7 +274,7 @@ class AsyncOperation: Operation {
     private var _executing = false
     private var _finished = false
 
-    override internal(set) var isExecuting: Bool {
+    override var isExecuting: Bool {
         get {
             lock.lock()
             let wasExecuting = _executing
@@ -221,7 +292,7 @@ class AsyncOperation: Operation {
         }
     }
 
-    override internal(set) var isFinished: Bool {
+    override var isFinished: Bool {
         get {
             lock.lock()
             let wasFinished = _finished
@@ -252,7 +323,7 @@ class AsyncOperation: Operation {
         isExecuting = true
 
         queue.async {
-            sleep(1)
+            Thread.sleep(forTimeInterval: 1)
             self.isExecuting = false
             self.isFinished = true
         }
