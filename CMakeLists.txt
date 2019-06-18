@@ -349,6 +349,8 @@ endif()
 add_swift_executable(plutil
                      SOURCES
                        Tools/plutil/main.swift
+                     TARGET
+                       ${CMAKE_C_COMPILER_TARGET}
                      CFLAGS
                        ${deployment_target}
                        ${deployment_enable_libdispatch}
@@ -374,6 +376,8 @@ add_swift_executable(plutil
 
 if(ENABLE_TESTING)
   add_swift_executable(xdgTestHelper
+                       TARGET
+                         ${CMAKE_C_COMPILER_TARGET}
                        CFLAGS
                          ${deployment_target}
                          ${deployment_enable_libdispatch}
@@ -485,6 +489,8 @@ if(ENABLE_TESTING)
                          TestFoundation/TestUUID.swift
                          TestFoundation/TestXMLDocument.swift
                          TestFoundation/TestXMLParser.swift
+                       TARGET
+                         ${CMAKE_C_COMPILER_TARGET}
                        CFLAGS
                          ${deployment_enable_libdispatch}
                          -F${CMAKE_CURRENT_BINARY_DIR}
