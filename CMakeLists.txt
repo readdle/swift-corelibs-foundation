@@ -124,7 +124,7 @@ endif()
 # CoreFoundation target.  When we gain proper CMake support for Swift, we should
 # be able to remove this and just use
 # `target_link_libraries(Foundation PRIVATE CoreFoundation)`.
-set(CoreFoundation_LIBRARIES $<TARGET_FILE:CoreFoundation>)
+set(CoreFoundation_LIBRARIES -l$<TARGET_FILE:CoreFoundation>)
 get_target_property(CoreFoundation_LINK_LIBRARIES CoreFoundation LINK_LIBRARIES)
 foreach(library ${CoreFoundation_LINK_LIBRARIES})
   if(NOT library STREQUAL Threads::Threads)
