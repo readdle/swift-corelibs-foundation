@@ -1711,6 +1711,10 @@ public struct FileAttributeType : RawRepresentable, Equatable, Hashable {
         return lhs.rawValue == rhs.rawValue
     }
 
+    #if os(Android) && (arch(i386) || arch(arm)) // hack for strange headers in NDK
+        fileprivate typealias mode_t = UInt32
+    #endif
+
     fileprivate init(statMode: mode_t) {
         switch statMode & S_IFMT {
         case S_IFCHR: self = .typeCharacterSpecial

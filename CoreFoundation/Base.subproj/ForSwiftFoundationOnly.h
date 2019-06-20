@@ -473,6 +473,15 @@ static inline int _direntNameLength(struct dirent *entry) {
 }
 
 // major() and minor() might be implemented as macros or functions.
+#if TARGET_OS_ANDROID && !TARGET_RT_64_BIT // hack for strange ndk headers
+static inline unsigned int _dev_major(unsigned long long rdev) {
+    return major(rdev);
+}
+
+static inline unsigned int _dev_minor(unsigned long long rdev) {
+    return minor(rdev);
+}
+#else
 static inline unsigned int _dev_major(dev_t rdev) {
     return major(rdev);
 }
@@ -480,6 +489,8 @@ static inline unsigned int _dev_major(dev_t rdev) {
 static inline unsigned int _dev_minor(dev_t rdev) {
     return minor(rdev);
 }
+#endif
+
 #endif
 
 _CF_EXPORT_SCOPE_END
