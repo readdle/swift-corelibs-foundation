@@ -15,7 +15,7 @@
     import Glibc
 #endif
 
-#if os(Android) // struct stat.st_mode is UInt32
+#if os(Android) && (arch(i386) || arch(arm)) // struct stat.st_mode is UInt32
 internal func &(left: UInt32, right: mode_t) -> mode_t {
     return mode_t(left) & right
 }
@@ -38,7 +38,7 @@ open class FileManager : NSObject {
     open func mountedVolumeURLs(includingResourceValuesForKeys propertyKeys: [URLResourceKey]?, options: VolumeEnumerationOptions = []) -> [URL]? {
         var urls: [URL]
 
-#if os(Linux)
+#if os(Linux) || os(Android)
         guard let procMounts = try? String(contentsOfFile: "/proc/mounts", encoding: .utf8) else {
             return nil
         }
@@ -657,8 +657,6 @@ open class FileManager : NSObject {
 
 #if os(macOS) || os(iOS)
         let ti = (TimeInterval(s.st_mtimespec.tv_sec) - kCFAbsoluteTimeIntervalSince1970) + (1.0e-9 * TimeInterval(s.st_mtimespec.tv_nsec))
-#elseif os(Android)
-        let ti = (TimeInterval(s.st_mtime) - kCFAbsoluteTimeIntervalSince1970) + (1.0e-9 * TimeInterval(s.st_mtime_nsec))
 #else
         let ti = (TimeInterval(s.st_mtim.tv_sec) - kCFAbsoluteTimeIntervalSince1970) + (1.0e-9 * TimeInterval(s.st_mtim.tv_nsec))
 #endif
