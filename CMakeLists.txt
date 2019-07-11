@@ -99,7 +99,7 @@ if(FOUNDATION_ENABLE_LIBDISPATCH)
   set(deployment_enable_libdispatch -DDEPLOYMENT_ENABLE_LIBDISPATCH)
   set(libdispatch_cflags -I;${FOUNDATION_PATH_TO_LIBDISPATCH_SOURCE};-I;${FOUNDATION_PATH_TO_LIBDISPATCH_BUILD}/src/swift;-Xcc;-fblocks)
   set(libdispatch_ldflags -L;${FOUNDATION_PATH_TO_LIBDISPATCH_BUILD};-L;${FOUNDATION_PATH_TO_LIBDISPATCH_BUILD}/src;-ldispatch;-lswiftDispatch)
-  if(CMAKE_SYSTEM_NAME STREQUAL Linux OR CMAKE_SYSTEM_NAME STREQUAL Android OR CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
+  if(CMAKE_SYSTEM_NAME STREQUAL Linux OR CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
     list(APPEND libdispatch_ldflags -Xlinker;-rpath;-Xlinker;${FOUNDATION_PATH_TO_LIBDISPATCH_BUILD}/src)
   endif()
 endif()
@@ -309,11 +309,12 @@ add_swift_library(Foundation
                     -D_DLL
                   LINK_FLAGS
                     ${CoreFoundation_LIBRARIES}
-                    ${CURL_LIBRARIES}
-                    ${ICU_UC_LIBRARY} ${ICU_I18N_LIBRARY}
-                    ${LIBXML2_LIBRARIES}
+                    -l${CURL_LIBRARIES}
+                    -l${ICU_UC_LIBRARY}
+                    -l${ICU_I18N_LIBRARY}
+                    -l${LIBXML2_LIBRARIES}
                     ${libdispatch_ldflags}
-                    $<TARGET_FILE:uuid>
+                    -l$<TARGET_FILE:uuid>
                     ${Foundation_RPATH}
                     ${WORKAROUND_SR9138}
                     ${WORKAROUND_SR9995}
@@ -560,22 +561,36 @@ if(ENABLE_TESTING)
                            ${CMAKE_CURRENT_BINARY_DIR}/TestFoundation/xdgTestHelper${CMAKE_EXECUTABLE_SUFFIX})
 endif()
 
+if(BUILD_SHARED_LIBS)
+  set(swift_dir swift)
+else()
+  set(swift_dir swift_static)
+endif()
+
+if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
+  set(install_target_dir "lib/${swift_dir}/${swift_os}")
+  set(install_target_dir_swiftmodules "lib/${swift_dir}/${swift_os}/${swift_arch}")
+else()
+  set(install_target_dir "lib/${swift_dir}/${swift_os}/${swift_arch}")
+  set(install_target_dir_swiftmodules "lib/${swift_dir}/${swift_os}/${swift_arch}")
+endif()
+
 # TODO(compnerd) honour lib vs lib64
 install(FILES
           ${CMAKE_CURRENT_BINARY_DIR}/swift/Foundation.swiftdoc
           ${CMAKE_CURRENT_BINARY_DIR}/swift/Foundation.swiftmodule
         DESTINATION
-          lib/swift/${swift_os}/${swift_arch})
+          ${install_target_dir_swiftmodules})
 if(BUILD_SHARED_LIBS)
   install(FILES
             ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}Foundation${CMAKE_SHARED_LIBRARY_SUFFIX}
           DESTINATION
-            lib/swift/${swift_os})
+            ${install_target_dir})
 else()
   install(FILES
             ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}Foundation${CMAKE_STATIC_LIBRARY_SUFFIX}
           DESTINATION
-            lib/swift_static/${swift_os})
+            ${install_target_dir})
 endif()
 # TODO(compnerd) install as a Framework as that is how swift actually is built
 install(DIRECTORY
