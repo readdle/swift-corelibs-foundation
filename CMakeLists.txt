@@ -484,6 +484,7 @@ if(ENABLE_TESTING)
                          TestFoundation/TestURLRequest.swift
                          TestFoundation/TestURLResponse.swift
                          TestFoundation/TestURLSession.swift
+                         TestFoundation/TestURLSessionRealServer.swift
                          TestFoundation/TestURL.swift
                          TestFoundation/TestUserDefaults.swift
                          TestFoundation/TestUtils.swift
