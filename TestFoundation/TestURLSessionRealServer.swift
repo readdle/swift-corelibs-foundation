@@ -7,7 +7,7 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 
-#if DEPLOYMENT_RUNTIME_OBJC || os(Linux)
+#if DEPLOYMENT_RUNTIME_OBJC || os(Linux) || os(Android)
     import Foundation
     import XCTest
 #else

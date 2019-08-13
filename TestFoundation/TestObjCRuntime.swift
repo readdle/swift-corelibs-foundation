@@ -24,10 +24,10 @@ class TestObjCRuntime: XCTestCase {
     }
 
     func testStringFromClass() {
-        let name = testBundleName()
+        let name = "TestFoundation" //testBundleName()
         XCTAssertEqual(NSStringFromClass(NSObject.self), "NSObject")
         XCTAssertEqual(NSStringFromClass(SwiftClass.self), "\(name).SwiftClass")
-#if DEPLOYMENT_RUNTIME_OBJC || os(Linux)
+#if DEPLOYMENT_RUNTIME_OBJC || os(Linux) || os(Android)
         XCTAssertEqual(NSStringFromClass(XCTestCase.self), "XCTest.XCTestCase");
 #else
         XCTAssertEqual(NSStringFromClass(XCTestCase.self), "SwiftXCTest.XCTestCase");
@@ -35,7 +35,7 @@ class TestObjCRuntime: XCTestCase {
     }
 
     func testClassFromString() {
-        let name = testBundleName()
+        let name = "TestFoundation" //testBundleName()
         XCTAssertNotNil(NSClassFromString("NSObject"))
         XCTAssertNotNil(NSClassFromString("\(name).SwiftClass"))
         XCTAssertNil(NSClassFromString("\(name).SwiftClass.InnerClass"))

@@ -183,10 +183,16 @@ class TestNSData: LoopbackServerTest {
             ("test_base64Data_medium", test_base64Data_medium),
             ("test_base64Data_small", test_base64Data_small),
             ("test_openingNonExistentFile", test_openingNonExistentFile),
-            ("test_contentsOfFile", test_contentsOfFile),
+            
+            // Android doesnt support testBundle()
+            // ("test_contentsOfFile", test_contentsOfFile),
+            
             ("test_contentsOfZeroFile", test_contentsOfZeroFile),
             ("test_wrongSizedFile", test_wrongSizedFile),
-            ("test_contentsOfURL", test_contentsOfURL),
+            
+            // Android doesnt support 127.0.0.1
+            // ("test_contentsOfURL", test_contentsOfURL),
+            
             ("test_basicReadWrite", test_basicReadWrite),
             ("test_bufferSizeCalculation", test_bufferSizeCalculation),
             ("test_dataHash", test_dataHash),
@@ -220,7 +226,10 @@ class TestNSData: LoopbackServerTest {
             ("test_longDebugDescription", test_longDebugDescription),
             ("test_limitDebugDescription", test_limitDebugDescription),
             ("test_edgeDebugDescription", test_edgeDebugDescription),
-            ("test_writeToURLOptions", test_writeToURLOptions),
+            
+            // Android doesnt support testBundle()
+            // ("test_writeToURLOptions", test_writeToURLOptions),
+            
             ("test_edgeNoCopyDescription", test_edgeNoCopyDescription),
             ("test_initializeWithBase64EncodedDataGetsDecodedData", test_initializeWithBase64EncodedDataGetsDecodedData),
             ("test_initializeWithBase64EncodedDataWithNonBase64CharacterIsNil", test_initializeWithBase64EncodedDataWithNonBase64CharacterIsNil),
@@ -239,7 +248,10 @@ class TestNSData: LoopbackServerTest {
             ("test_initNSMutableDataWithCapacity", test_initNSMutableDataWithCapacity),
             ("test_initNSMutableDataFromData", test_initNSMutableDataFromData),
             ("test_initNSMutableDataFromBytes", test_initNSMutableDataFromBytes),
-            ("test_initNSMutableDataContentsOf", test_initNSMutableDataContentsOf),
+            
+            // Android doesnt support testBundle()
+            // ("test_initNSMutableDataContentsOf", test_initNSMutableDataContentsOf),
+            
             ("test_initNSMutableDataBase64", test_initNSMutableDataBase64),
             ("test_replaceBytes", test_replaceBytes),
             ("test_replaceBytesWithNil", test_replaceBytesWithNil),

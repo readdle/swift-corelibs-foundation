@@ -528,9 +528,15 @@ class TestURLComponents : XCTestCase {
     static var allTests: [(String, (TestURLComponents) -> () throws -> Void)] {
         return [
             ("test_queryItems", test_queryItems),
-            ("test_string", test_string),
+            
+            // Android doesnt support testBundle()
+            // ("test_string", test_string),
+            
             ("test_port", test_portSetter),
-            ("test_url", test_url),
+            
+            // Android doesnt support testBundle()
+            // ("test_url", test_url),
+            
             ("test_copy", test_copy),
             ("test_hash", test_hash),
             ("test_createURLWithComponents", test_createURLWithComponents),
