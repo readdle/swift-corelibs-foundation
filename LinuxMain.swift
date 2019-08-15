@@ -115,6 +115,9 @@ XCTMain([
     testCase(TestUnit.allTests),
     testCase(TestDimension.allTests),
     testCase(TestNSLock.allTests),
-    // testCase(TestURLSessionRealServer.allTests), // FAILED HANG UP
+    testCase(TestURLSessionRealServer.allTests),
+
+    // RDTests
+    testCase(RDURLSessionTest.allTests),
 ])
 
