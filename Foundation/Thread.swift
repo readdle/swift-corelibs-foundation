@@ -27,17 +27,9 @@ internal class NSThreadSpecific<T: NSObject> {
             return value
         }
     }
-    
-    internal var current: T? {
-        return _CFThreadSpecificGet(key) as? T
-    }
 
     internal func set(_ value: T) {
         _CFThreadSpecificSet(key, value)
-    }
-    
-    internal func clear() {
-        _CFThreadSpecificSet(key, nil)
     }
 }
 
