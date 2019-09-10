@@ -412,6 +412,13 @@ if("${CMAKE_C_SIMULATE_ID}" STREQUAL "MSVC")
                          PRIVATE
                            -fblocks
                            /EHsc)
+elseif(CMAKE_C_COMPILER_VERSION VERSION_LESS 8.0.7 AND CMAKE_SYSTEM_NAME STREQUAL Android)
+  target_compile_options(CoreFoundation
+                         PRIVATE
+                           -fblocks
+                           -fdollars-in-identifiers
+                           -fexceptions
+                           -fno-common)
 else()
   target_compile_options(CoreFoundation
                          PRIVATE
@@ -422,7 +429,8 @@ else()
                            -fno-common)
 endif()
 if(CF_DEPLOYMENT_SWIFT)
-  if("${CMAKE_C_SIMULATE_ID}" STREQUAL "MSVC")
+  if(CMAKE_C_COMPILER_VERSION VERSION_LESS 8.0.7 AND CMAKE_SYSTEM_NAME STREQUAL Android)
+  elseif("${CMAKE_C_SIMULATE_ID}" STREQUAL "MSVC")
     target_compile_options(CoreFoundation
                            PRIVATE
                              /clang:-fcf-runtime-abi=swift)
