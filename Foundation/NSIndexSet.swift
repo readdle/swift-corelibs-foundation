@@ -128,6 +128,16 @@ open class NSIndexSet : NSObject, NSCopying, NSMutableCopying, NSSecureCoding {
 
         return true
     }
+
+    open override var hash: Int {
+        var hash = firstIndex + lastIndex
+
+        enumerateRanges { range, stop in
+            hash += range.length
+        }
+
+        return hash
+    }
     
     open var count: Int {
         return _count
