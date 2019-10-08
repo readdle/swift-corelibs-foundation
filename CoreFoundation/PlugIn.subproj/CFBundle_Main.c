@@ -80,7 +80,19 @@ static CFBundleRef _CFBundleGetMainBundleAlreadyLocked(void) {
         CFStringRef str = NULL;
         CFURLRef executableURL = NULL, bundleURL = NULL;
         _initedMainBundle = true;
+
+#if defined(__ANDROID__)
+        const char *bundlePath = getenv("CF_MAIN_BUNDLE_PATH");
+        if (bundlePath) {
+            str = CFStringCreateWithFileSystemRepresentation(kCFAllocatorSystemDefault, bundlePath);
+            bundleURL = CFURLCreateWithFileSystemPath(kCFAllocatorSystemDefault, str, PLATFORM_PATH_STYLE, true);
+            processPath = NULL;
+        } else {
+            processPath = _CFProcessPath();
+        }
+#else
         processPath = _CFProcessPath();
+#endif
         if (processPath) {
             str = CFStringCreateWithFileSystemRepresentation(kCFAllocatorSystemDefault, processPath);
             if (!executableURL) executableURL = CFURLCreateWithFileSystemPath(kCFAllocatorSystemDefault, str, PLATFORM_PATH_STYLE, false);
