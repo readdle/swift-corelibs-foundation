@@ -163,7 +163,9 @@ class TestThread : XCTestCase {
             return -(start.timeIntervalSinceNow + timeInterval)
         }
 
-        let allowedOversleepRange = 0.0..<0.2
+        // Allow a little early wake-ups. Sleep timer on Windows
+        // is more precise than timer used in Date implementation.
+        let allowedOversleepRange = -0.00001..<0.1
 
         let oversleep1 = measureOversleep(TimeInterval(0.9))
         XCTAssertTrue(allowedOversleepRange.contains(oversleep1), "Oversleep \(oversleep1) is not in expected range \(allowedOversleepRange)")
@@ -181,7 +183,7 @@ class TestThread : XCTestCase {
             return -date.timeIntervalSinceNow
         }
 
-        let allowedOversleepRange = 0.0..<0.5
+        let allowedOversleepRange = -0.00001..<0.1
 
         let oversleep1 = measureOversleep(Date(timeIntervalSinceNow: 0.8))
         XCTAssertTrue(allowedOversleepRange.contains(oversleep1), "Oversleep \(oversleep1) is not in expected range \(allowedOversleepRange)")
