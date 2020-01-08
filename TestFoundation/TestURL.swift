@@ -84,6 +84,11 @@ class TestURL : XCTestCase {
       // ensure that / is handled properly
       let u8 = URL(fileURLWithPath: "/")
       XCTAssertEqual(u8.absoluteString, "file:///")
+
+      // ensure that leading \ is preserved
+      let u9 = URL(fileURLWithPath: "\\abs\\path")
+      XCTAssertEqual(u9.absoluteString, "file:///abs/path")
+      XCTAssertEqual(u9.path, "\\abs\\path")
     }
 
     func test_WindowsPathSeparator2() {
