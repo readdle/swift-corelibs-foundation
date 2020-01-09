@@ -26,8 +26,14 @@ find_package(Threads)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL Darwin)
   find_package(LibXml2 REQUIRED)
-  find_package(CURL REQUIRED)
   find_package(ICU COMPONENTS uc i18n REQUIRED)
+
+  find_package(CURL CONFIG QUIET)
+  if(CURL_FOUND)
+    message(STATUS "CURL library found via CONFIG mode")
+  else()
+    find_package(CURL MODULE REQUIRED)
+  endif()
 endif()
 
 include(GNUInstallDirs)
