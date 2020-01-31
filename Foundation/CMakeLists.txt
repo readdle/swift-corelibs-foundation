@@ -140,11 +140,14 @@ target_compile_definitions(Foundation PRIVATE
   DEPLOYMENT_RUNTIME_SWIFT)
 target_compile_options(Foundation PUBLIC
   "SHELL:-Xcc -F${CMAKE_BINARY_DIR}")
-if(CMAKE_SYSTEM_NAME STREQUAL Windows AND CMAKE_VERSION VERSION_LESS 3.16)
-  # Work around for CMake 15 which doesn't link in the resource file
-  # target properly
-  add_dependencies(Foundation CoreFoundationResources)
-  target_link_options(Foundation PRIVATE $<TARGET_OBJECTS:CoreFoundationResources>)
+if(CMAKE_SYSTEM_NAME STREQUAL Windows)
+  target_link_options(Foundation PRIVATE LINKER:/ignore:4286)
+  if(CMAKE_VERSION VERSION_LESS 3.16)
+    # Work around for CMake 15 which doesn't link in the resource file
+    # target properly
+    add_dependencies(Foundation CoreFoundationResources)
+    target_link_options(Foundation PRIVATE $<TARGET_OBJECTS:CoreFoundationResources>)
+  endif()
 endif()
 if(ENABLE_TESTING)
   target_compile_options(Foundation PRIVATE
@@ -210,6 +213,9 @@ target_compile_definitions(FoundationNetworking PRIVATE
   NS_BUILDING_FOUNDATION_NETWORKING)
 target_compile_options(FoundationNetworking PUBLIC
   "SHELL:-Xcc -F${CMAKE_BINARY_DIR}")
+if(CMAKE_SYSTEM_NAME STREQUAL Windows)
+  target_link_options(FoundationNetworking PRIVATE LINKER:/ignore:4286)
+endif()
 if(ENABLE_TESTING)
   target_compile_options(FoundationNetworking PRIVATE
     -enable-testing)
@@ -234,6 +240,9 @@ target_compile_definitions(FoundationXML PRIVATE
   DEPLOYMENT_RUNTIME_SWIFT)
 target_compile_options(FoundationXML PUBLIC
   "SHELL:-Xcc -F${CMAKE_BINARY_DIR}")
+if(CMAKE_SYSTEM_NAME STREQUAL Windows)
+  target_link_options(FoundationXML PRIVATE LINKER:/ignore:4286)
+endif()
 if(ENABLE_TESTING)
   target_compile_options(FoundationXML PRIVATE
     -enable-testing)

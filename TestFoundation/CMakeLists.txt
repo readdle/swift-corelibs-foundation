@@ -109,6 +109,9 @@ target_sources(TestFoundation PRIVATE
   TestUUID.swift
   TestXMLDocument.swift
   TestXMLParser.swift)
+if(CMAKE_SYSTEM_NAME STREQUAL Windows)
+  target_link_options(TestFoundation PRIVATE LINKER:/ignore:4286)
+endif()
 target_link_libraries(TestFoundation PRIVATE
   Foundation
   FoundationNetworking

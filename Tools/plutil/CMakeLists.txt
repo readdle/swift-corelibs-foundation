@@ -1,6 +1,9 @@
 
 add_executable(plutil
   main.swift)
+if(CMAKE_SYSTEM_NAME STREQUAL Windows)
+  target_link_options(plutil PRIVATE LINKER:/ignore:4286)
+endif()
 target_link_libraries(plutil PRIVATE
   Foundation)
 set_target_properties(plutil PROPERTIES
