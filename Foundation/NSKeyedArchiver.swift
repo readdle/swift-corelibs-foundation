@@ -66,7 +66,7 @@ open class NSKeyedArchiver : NSCoder {
             self.rawValue = rawValue
         }
         
-        static let none = ArchiverFlags(rawValue: 0)
+        static let none = ArchiverFlags([])
         static let finishedEncoding = ArchiverFlags(rawValue : 1)
         static let requiresSecureCoding = ArchiverFlags(rawValue: 2)
     }
@@ -223,8 +223,8 @@ open class NSKeyedArchiver : NSCoder {
                 success = true
             }
         } else {
-            success = CFPropertyListWrite(plist, self._stream as! CFWriteStream,
-                                          kCFPropertyListXMLFormat_v1_0, 0, nil) > 0
+            let stream = self._stream as! CFWriteStream
+            success = CFPropertyListWrite(plist, stream, kCFPropertyListXMLFormat_v1_0, 0, nil) > 0
         }
         
         return success

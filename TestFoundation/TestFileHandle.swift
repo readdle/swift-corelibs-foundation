@@ -99,11 +99,11 @@ class TestFileHandle : XCTestCase {
 #if os(Windows)
         var hReadPipe: HANDLE? = INVALID_HANDLE_VALUE
         var hWritePipe: HANDLE? = INVALID_HANDLE_VALUE
-        if CreatePipe(&hReadPipe, &hWritePipe, nil, 0) == FALSE {
+        if !CreatePipe(&hReadPipe, &hWritePipe, nil, 0) {
           assert(false)
         }
 
-        if CloseHandle(hWritePipe) == FALSE {
+        if !CloseHandle(hWritePipe) {
           assert(false)
         }
 
@@ -247,8 +247,8 @@ class TestFileHandle : XCTestCase {
         }, "Must throw when encountering a read error")
     }
 
-#if NS_FOUNDATION_ALLOWS_TESTABLE_IMPORT
     func testOffset() {
+#if NS_FOUNDATION_ALLOWS_TESTABLE_IMPORT && !os(Windows)
         // One byte at a time:
         let handle = createFileHandle()
         var offset: UInt64 = 0
@@ -266,8 +266,8 @@ class TestFileHandle : XCTestCase {
         expectThrows(seekError, {
             _ = try createFileHandleForSeekErrors().offset()
         }, "Must throw when encountering a seek error")
-    }
 #endif
+    }
 
     func performWriteTest<T: DataProtocol>(with data: T, expecting expectation: Data? = nil) {
         let url = createTemporaryFile()
