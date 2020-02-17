@@ -3977,6 +3977,13 @@ static CFArrayRef WindowsPathToURLComponents(CFStringRef path, CFAllocatorRef al
     urlComponents = CFArrayCreateMutableCopy(alloc, 0, tmp);
     CFRelease(tmp);
 
+    if (isDir == FALSE) {
+        CFIndex last = CFArrayGetCount(urlComponents) - 1;
+        if (CFEqual(CFArrayGetValueAtIndex(urlComponents, last), CFSTR(""))) {
+            CFArrayRemoveValueAtIndex(urlComponents, last);
+        }
+    }
+
     CFStringRef firstComponent = (CFStringRef)CFArrayGetValueAtIndex(urlComponents, 0);
     if (isAbsolute && CFStringGetLength(firstComponent) == 2 && CFStringGetCharacterAtIndex(firstComponent, 1) == ':') {
         i = 1; // Skip over the drive letter 
