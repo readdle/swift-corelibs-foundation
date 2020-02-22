@@ -634,16 +634,30 @@ class TestProcess : XCTestCase {
 
         do {
             let (stdout, _) = try runTask([xdgTestHelperURL().path, "--getcwd"], currentDirectoryPath: "/")
-            XCTAssertEqual(stdout.trimmingCharacters(in: CharacterSet(["\n", "\r"])), "/")
+            var directory = stdout.trimmingCharacters(in: CharacterSet(["\n", "\r"]))
+#if os(Windows)
+            let zero: String.Index = directory.startIndex
+            let one: String.Index = directory.index(zero, offsetBy: 1)
+            XCTAssertTrue(directory[zero].isLetter)
+            XCTAssertEqual(directory[one], ":")
+            directory = "/" + String(directory.dropFirst(2))
+#endif
+            XCTAssertEqual(URL(fileURLWithPath: directory).absoluteURL,
+                           URL(fileURLWithPath: "/").absoluteURL)
         }
 
         do {
+            // NOTE: Windows does have an environment variable called `PWD`.
+            // The closed thing is %CD% which is a property of the shell rather
+            // than the environment.  Simply ignore this test on Windows.
+#if !os(Windows)
             XCTAssertNotEqual("/", FileManager.default.currentDirectoryPath)
             XCTAssertNotEqual(FileManager.default.currentDirectoryPath, "/")
             let (stdout, _) = try runTask([xdgTestHelperURL().path, "--echo-PWD"], currentDirectoryPath: "/")
             let directory = stdout.trimmingCharacters(in: CharacterSet(["\n", "\r"]))
             XCTAssertEqual(directory, ProcessInfo.processInfo.environment["PWD"])
             XCTAssertNotEqual(directory, "/")
+#endif
         }
 
         do {
