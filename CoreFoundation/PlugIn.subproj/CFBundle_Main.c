@@ -91,21 +91,6 @@ static CFBundleRef _CFBundleGetMainBundleAlreadyLocked(void) {
             //??? what if we are not the main executable in the bundle?
             // NB doFinalProcessing must be false here, see below
             _mainBundle = _CFBundleCreateMain(kCFAllocatorSystemDefault, bundleURL);
-
-#if TARGET_OS_WIN32
-            // Fallback to executable parent directory as bundle URL
-            if (_mainBundle == NULL && executableURL != NULL) {
-                CFURLRef executableContainerURL = CFURLCreateCopyDeletingLastPathComponent(kCFAllocatorSystemDefault, executableURL);
-#if LOG_BUNDLE_LOAD
-                CFLog(kCFLogLevelWarning, CFSTR("failed to load bundle at %@, will try %@ instead"), bundleURL, executableContainerURL);
-#endif
-                if (executableContainerURL) {
-                    _mainBundle = _CFBundleCreateMain(kCFAllocatorSystemDefault, executableContainerURL);
-                    CFRelease(executableContainerURL);
-                }
-            }
-#endif
-
             if (_mainBundle) {
                 // make sure that the main bundle is listed as loaded, and mark it as executable
                 _mainBundle->_isLoaded = true;
