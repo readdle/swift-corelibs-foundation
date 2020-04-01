@@ -1,14 +1,16 @@
 // This source file is part of the Swift.org open source project
 //
-// Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
+// Copyright (c) 2014 - 2020 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
-// See http://swift.org/LICENSE.txt for license information
-// See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 
-class TestURLSession : LoopbackServerTest {
-    
+class TestURLSession: LoopbackServerTest {
+
+    let httpMethods = ["HEAD", "GET", "PUT", "POST", "DELETE"]
+
     func test_dataTaskWithURL() {
         let urlString = "http://127.0.0.1:\(TestURLSession.serverPort)/Nepal"
         let url = URL(string: urlString)!
@@ -19,7 +21,7 @@ class TestURLSession : LoopbackServerTest {
             XCTAssertEqual(d.capital, "Kathmandu", "test_dataTaskWithURLRequest returned an unexpected result")
         }
     }
-    
+
     func test_dataTaskWithURLCompletionHandler() {
         //shared session
         dataTaskWithURLCompletionHandler(with: URLSession.shared)
@@ -83,7 +85,7 @@ class TestURLSession : LoopbackServerTest {
         waitForExpectations(timeout: 12)
     }
     
-    func test_dataTaskWithHttpInputStream() {
+    func test_dataTaskWithHttpInputStream() throws {
         let urlString = "http://127.0.0.1:\(TestURLSession.serverPort)/echo"
         
         let dataString = """
@@ -93,28 +95,20 @@ class TestURLSession : LoopbackServerTest {
 
             Vivamus vehicula faucibus odio vel maximus. Vivamus elementum, quam at accumsan rhoncus, ex ligula maximus sem, sed pretium urna enim ut urna. Donec semper porta augue at faucibus. Quisque vel congue purus. Morbi vitae elit pellentesque, finibus lectus quis, laoreet nulla. Praesent in fermentum felis. Aenean vestibulum dictum lorem quis egestas. Sed dictum elementum est laoreet volutpat.
         """
-        
-        let url = URL(string: urlString)!
-        let urlSession = URLSession(configuration: URLSessionConfiguration.default)
-        
+        let data = try XCTUnwrap(dataString.data(using: .utf8))
+        let inputStream = InputStream(data: data)
+
+        let url = try XCTUnwrap(URL(string: urlString))
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = "POST"
-        
-        guard let data = dataString.data(using: .utf8) else {
-            XCTFail()
-            return
-        }
-        
-        let inputStream = InputStream(data: data)
-        inputStream.open()
-        
         urlRequest.httpBodyStream = inputStream
-        
         urlRequest.setValue("en-us", forHTTPHeaderField: "Accept-Language")
         urlRequest.setValue("text/xml; charset=utf-8", forHTTPHeaderField: "Content-Type")
         urlRequest.setValue("chunked", forHTTPHeaderField: "Transfer-Encoding")
         
         let expect = expectation(description: "POST \(urlString): with HTTP Body as InputStream")
+
+        let urlSession = URLSession(configuration: URLSessionConfiguration.default)
         let task = urlSession.dataTask(with: urlRequest) { respData, response, error in
             XCTAssertNotNil(respData)
             XCTAssertNotNil(response)
@@ -261,7 +255,7 @@ class TestURLSession : LoopbackServerTest {
         XCTAssert(task.isEqual(task.copy()))
     }
 
-    // This test is buggy becuase the server could respond before the task is cancelled.
+    // This test is buggy because the server could respond before the task is cancelled.
     func test_cancelTask() {
         let urlString = "http://127.0.0.1:\(TestURLSession.serverPort)/Peru"
         var urlRequest = URLRequest(url: URL(string: urlString)!)
@@ -272,6 +266,44 @@ class TestURLSession : LoopbackServerTest {
         d.cancel()
         waitForExpectations(timeout: 12)
     }
+
+    func test_suspendResumeTask() throws {
+        let urlString = "http://127.0.0.1:\(TestURLSession.serverPort)/get"
+        let url = try XCTUnwrap(URL(string: urlString))
+
+        let expect = expectation(description: "GET \(urlString)")
+        let task = URLSession.shared.dataTask(with: url) { data, response, error in
+             guard let httpResponse = response as? HTTPURLResponse else {
+                XCTFail("response (\(response.debugDescription)) invalid")
+                return
+            }
+            if httpResponse.statusCode == 200 {
+                expect.fulfill()
+            }
+        }
+
+        // The task starts suspended (1) so this requires 1 extra resume to perform the task
+        task.suspend()                          // 2
+        XCTAssertEqual(task.state, .suspended)
+        task.suspend()                          // 3
+        XCTAssertEqual(task.state, .suspended)
+
+        task.resume()                           // 2
+        XCTAssertEqual(task.state, .suspended)  // Darwin reports this as .running even though the task hasnt actually resumed
+        task.resume()                           // 1
+        XCTAssertEqual(task.state, .suspended)  // Darwin reports this as .running even though the task hasnt actually resumed
+
+        task.resume()                           // 0 - Task can run
+        XCTAssertEqual(task.state, .running)
+
+        task.resume()                           // -1
+        XCTAssertEqual(task.state, .running)
+        task.resume()                           // -2
+        XCTAssertEqual(task.state, .running)
+
+        waitForExpectations(timeout: 3)
+    }
+
     
     func test_verifyRequestHeaders() {
         let config = URLSessionConfiguration.default
@@ -359,7 +391,292 @@ class TestURLSession : LoopbackServerTest {
         
         waitForExpectations(timeout: 30)
     }
-    
+
+    func test_httpRedirectionWithCode300() throws {
+        let statusCode = 300
+        for method in httpMethods {
+            let testMethod = "\(method) request with statusCode \(statusCode)"
+            let urlString = "http://127.0.0.1:\(TestURLSession.serverPort)/\(statusCode)?location=jsonBody"
+            let url = try XCTUnwrap(URL(string: urlString), "Cant create URL for \(testMethod)")
+            var request = URLRequest(url: url)
+            request.httpMethod = method
+            let d = HTTPRedirectionDataTask(with: expectation(description: "\(method) \(urlString): with HTTP redirection"))
+            d.run(with: request)
+
+            waitForExpectations(timeout: 12)
+            XCTAssertNil(d.error)
+
+            XCTAssertNil(d.redirectionResponse)
+            XCTAssertNotNil(d.response)
+            let httpresponse = d.response as? HTTPURLResponse
+            XCTAssertEqual(httpresponse?.statusCode, statusCode, "HTTP final response code is invalid for \(testMethod)")
+
+            let callbackMsg = "Bad callback for \(testMethod)"
+            switch method {
+                case "HEAD":
+                    XCTAssertEqual(d.callbackCount, 2, "Callback count for \(testMethod)")
+                    XCTAssertEqual(d.callback(0), "urlSession(_:dataTask:didReceive:completionHandler:)", callbackMsg)
+                    XCTAssertEqual(d.callback(1), "urlSession(_:task:didCompleteWithError:)", callbackMsg)
+                    XCTAssertEqual(d.receivedData.count, 0) // No body for HEAD requests
+
+                default:
+                    XCTAssertEqual(d.callbackCount, 3, "Callback count for \(testMethod)")
+                    XCTAssertEqual(d.callback(0), "urlSession(_:dataTask:didReceive:completionHandler:)", callbackMsg)
+                    XCTAssertEqual(d.callback(1), "urlSession(_:dataTask:didReceive:)", callbackMsg)
+                    XCTAssertEqual(d.callback(2), "urlSession(_:task:didCompleteWithError:)", callbackMsg)
+
+                    if let body = String(data: d.receivedData, encoding: .utf8) {
+                        XCTAssertEqual(body, "Redirecting to \(method) jsonBody", "URI mismatch for \(testMethod)")
+                    } else {
+                        XCTFail("No JSON body for \(testMethod)")
+                    }
+            }
+        }
+    }
+
+    func test_httpRedirectionWithCode301_302() throws {
+        for statusCode in 301...302 {
+            for method in httpMethods {
+                let testMethod = "\(method) request with statusCode \(statusCode)"
+                let urlString = "http://127.0.0.1:\(TestURLSession.serverPort)/\(statusCode)?location=jsonBody"
+                let url = try XCTUnwrap(URL(string: urlString), "Cant create URL for \(testMethod)")
+                var request = URLRequest(url: url)
+                request.httpMethod = method
+                let d = HTTPRedirectionDataTask(with: expectation(description: "\(method) \(urlString): with HTTP redirection"))
+                d.run(with: request)
+
+                waitForExpectations(timeout: 12)
+                XCTAssertNil(d.error)
+
+                XCTAssertNotNil(d.response)
+                let httpresponse = d.response as? HTTPURLResponse
+                XCTAssertEqual(httpresponse?.statusCode, 200, "HTTP final response code is invalid for \(testMethod)")
+                XCTAssertEqual(d.redirectionResponse?.statusCode, statusCode, "HTTP redirection response code is invalid for \(testMethod)")
+
+                let callbackMsg = "Bad callback for \(testMethod)"
+                switch method {
+                    case "HEAD":
+                        XCTAssertEqual(d.callbackCount, 3, "Callback count for \(testMethod)")
+                        XCTAssertEqual(d.callback(0), "urlSession(_:task:willPerformHTTPRedirection:newRequest:completionHandler:)", callbackMsg)
+                        XCTAssertEqual(d.callback(1), "urlSession(_:dataTask:didReceive:completionHandler:)", callbackMsg)
+                        XCTAssertEqual(d.callback(2), "urlSession(_:task:didCompleteWithError:)", callbackMsg)
+                        XCTAssertEqual(d.receivedData.count, 0) // No body for HEAD requests
+
+
+                    default:
+                        XCTAssertEqual(d.callbackCount, 4, "Callback count for \(testMethod)")
+                        XCTAssertEqual(d.callback(0), "urlSession(_:task:willPerformHTTPRedirection:newRequest:completionHandler:)", callbackMsg)
+                        XCTAssertEqual(d.callback(1), "urlSession(_:dataTask:didReceive:completionHandler:)", callbackMsg)
+                        XCTAssertEqual(d.callback(2), "urlSession(_:dataTask:didReceive:)", callbackMsg)
+                        XCTAssertEqual(d.callback(3), "urlSession(_:task:didCompleteWithError:)", callbackMsg)
+
+                        if let jsonBody = try? JSONSerialization.jsonObject(with: d.receivedData, options: []) as? [String: String] {
+                            let uri = (method == "POST" ? "GET" : method) + " /jsonBody HTTP/1.1"
+                            XCTAssertEqual(jsonBody["uri"], uri, "URI mismatch for \(testMethod)")
+                        } else {
+                            XCTFail("No JSON body for \(testMethod)")
+                    }
+                }
+            }
+        }
+    }
+
+    func test_httpRedirectionWithCode303() throws {
+        let statusCode = 303
+        for method in httpMethods {
+            let testMethod = "\(method) request with statusCode \(statusCode)"
+            let urlString = "http://127.0.0.1:\(TestURLSession.serverPort)/\(statusCode)?location=jsonBody"
+            let url = try XCTUnwrap(URL(string: urlString), "Cant create URL for \(testMethod)")
+            var request = URLRequest(url: url)
+            request.httpMethod = method
+            let d = HTTPRedirectionDataTask(with: expectation(description: "\(method) \(urlString): with HTTP redirection"))
+            d.run(with: request)
+
+            waitForExpectations(timeout: 12)
+            XCTAssertNil(d.error)
+
+            XCTAssertNotNil(d.response)
+            let httpresponse = d.response as? HTTPURLResponse
+            XCTAssertEqual(httpresponse?.statusCode, 200, "HTTP final response code is invalid for \(testMethod)")
+            XCTAssertEqual(d.redirectionResponse?.statusCode, statusCode, "HTTP redirection response code is invalid for \(testMethod)")
+
+            let callbackMsg = "Bad callback for \(testMethod)"
+            XCTAssertEqual(d.callbackCount, 4, "Callback count for \(testMethod)")
+            XCTAssertEqual(d.callback(0), "urlSession(_:task:willPerformHTTPRedirection:newRequest:completionHandler:)", callbackMsg)
+            XCTAssertEqual(d.callback(1), "urlSession(_:dataTask:didReceive:completionHandler:)", callbackMsg)
+            XCTAssertEqual(d.callback(2), "urlSession(_:dataTask:didReceive:)", callbackMsg)
+            XCTAssertEqual(d.callback(3), "urlSession(_:task:didCompleteWithError:)", callbackMsg)
+            if let jsonBody = try? JSONSerialization.jsonObject(with: d.receivedData, options: []) as? [String: String] {
+                let uri = "GET /jsonBody HTTP/1.1"
+                XCTAssertEqual(jsonBody["uri"], uri, "URI mismatch for \(testMethod)")
+            } else {
+                XCTFail("No jsonBody for \(testMethod)")
+            }
+        }
+    }
+
+    func test_httpRedirectionWithCode304() throws {
+        let statusCode = 304
+        for method in httpMethods {
+            let testMethod = "\(method) request with statusCode \(statusCode)"
+            let urlString = "http://127.0.0.1:\(TestURLSession.serverPort)/\(statusCode)?location=jsonBody"
+            let url = try XCTUnwrap(URL(string: urlString), "Cant create URL for \(testMethod)")
+            var request = URLRequest(url: url)
+            request.httpMethod = method
+            let d = HTTPRedirectionDataTask(with: expectation(description: "\(method) \(urlString): with HTTP redirection"))
+            d.run(with: request)
+
+            waitForExpectations(timeout: 12)
+            XCTAssertNil(d.error)
+
+            XCTAssertNotNil(d.response)
+            let httpresponse = d.response as? HTTPURLResponse
+            XCTAssertEqual(httpresponse?.statusCode, statusCode, "HTTP final response code is invalid for \(testMethod)")
+            XCTAssertNil(d.redirectionResponse)
+
+            let callbackMsg = "Bad callback for \(testMethod)"
+            XCTAssertEqual(d.callbackCount, 2, "Callback count for \(testMethod)")
+            XCTAssertEqual(d.callback(0), "urlSession(_:dataTask:didReceive:completionHandler:)", callbackMsg)
+            XCTAssertEqual(d.callback(1), "urlSession(_:task:didCompleteWithError:)", callbackMsg)
+
+            XCTAssertEqual(d.receivedData.count, 0)
+            let jsonBody = try? JSONSerialization.jsonObject(with: d.receivedData, options: []) as? [String: String]
+            XCTAssertNil(jsonBody)
+        }
+    }
+
+    func test_httpRedirectionWithCode305_308() throws {
+        for statusCode in 305...308 {
+            for method in httpMethods {
+                let testMethod = "\(method) request with statusCode \(statusCode)"
+                let urlString = "http://127.0.0.1:\(TestURLSession.serverPort)/\(statusCode)?location=jsonBody"
+                let url = try XCTUnwrap(URL(string: urlString), "Cant create URL for \(testMethod)")
+                var request = URLRequest(url: url)
+                request.httpMethod = method
+                let d = HTTPRedirectionDataTask(with: expectation(description: "\(method) \(urlString): with HTTP redirection"))
+                d.run(with: request)
+
+                waitForExpectations(timeout: 12)
+                XCTAssertNil(d.error)
+
+                XCTAssertNotNil(d.response)
+                let httpresponse = d.response as? HTTPURLResponse
+                XCTAssertEqual(httpresponse?.statusCode, 200, "HTTP final response code is invalid for \(testMethod)")
+                XCTAssertEqual(d.redirectionResponse?.statusCode, statusCode, "HTTP redirection response code is invalid for \(testMethod)")
+
+                let callbackMsg = "Bad callback for \(testMethod)"
+                switch method {
+                    case "HEAD":
+                        XCTAssertEqual(d.callbackCount, 3, "Callback count for \(testMethod)")
+                        XCTAssertEqual(d.callback(0), "urlSession(_:task:willPerformHTTPRedirection:newRequest:completionHandler:)", callbackMsg)
+                        XCTAssertEqual(d.callback(1), "urlSession(_:dataTask:didReceive:completionHandler:)", callbackMsg)
+                        XCTAssertEqual(d.callback(2), "urlSession(_:task:didCompleteWithError:)", callbackMsg)
+                        XCTAssertEqual(d.receivedData.count, 0) // No body for HEAD requests
+
+                    default:
+                        XCTAssertEqual(d.callbackCount, 4, "Callback count for \(testMethod)")
+                        XCTAssertEqual(d.callback(0), "urlSession(_:task:willPerformHTTPRedirection:newRequest:completionHandler:)", callbackMsg)
+                        XCTAssertEqual(d.callback(1), "urlSession(_:dataTask:didReceive:completionHandler:)", callbackMsg)
+                        XCTAssertEqual(d.callback(2), "urlSession(_:dataTask:didReceive:)", callbackMsg)
+                        XCTAssertEqual(d.callback(3), "urlSession(_:task:didCompleteWithError:)", callbackMsg)
+                        if let jsonBody = try? JSONSerialization.jsonObject(with: d.receivedData, options: []) as? [String: String] {
+                            let uri = "\(method) /jsonBody HTTP/1.1"
+                            XCTAssertEqual(jsonBody["uri"], uri, "URI mismatch for \(testMethod)")
+                        } else {
+                            XCTFail("No JSON body for \(testMethod)")
+                    }
+                }
+            }
+        }
+    }
+
+    func test_httpRedirectDontFollowUsingNil() throws {
+        let statusCode = 302
+        for method in httpMethods {
+            let testMethod = "\(method) request with statusCode \(statusCode)"
+            let urlString = "http://127.0.0.1:\(TestURLSession.serverPort)/\(statusCode)?location=jsonBody"
+            let url = try XCTUnwrap(URL(string: urlString), "Cant create URL for \(testMethod)")
+            var request = URLRequest(url: url)
+            request.httpMethod = method
+            let delegate = SessionDelegate(with: expectation(description: "\(method) \(urlString): with HTTP redirection"))
+            delegate.redirectionHandler = { (response: HTTPURLResponse, request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) in
+                // Dont follow the request by calling the completion handler with nil
+                completionHandler(nil)
+            }
+            delegate.run(with: request, timeoutInterval: 2)
+
+            waitForExpectations(timeout: 3)
+            XCTAssertNil(delegate.error)
+
+            XCTAssertNotNil(delegate.response)
+            let httpResponse = delegate.response as? HTTPURLResponse
+            XCTAssertEqual(httpResponse?.statusCode, 302, "HTTP final response code is invalid for \(testMethod)")
+            XCTAssertEqual(delegate.redirectionResponse?.statusCode, statusCode, "HTTP redirection response code is invalid for \(testMethod)")
+
+            let callbackMsg = "Bad callback for \(testMethod)"
+            switch method {
+                case "HEAD":
+                    let callbacks = [
+                        "urlSession(_:task:willPerformHTTPRedirection:newRequest:completionHandler:)",
+                        "urlSession(_:dataTask:didReceive:completionHandler:)",
+                        "urlSession(_:task:didCompleteWithError:)"
+                    ]
+                    XCTAssertEqual(delegate.callbacks.count, 3, "Callback count for \(testMethod)")
+                    XCTAssertEqual(delegate.callbacks, callbacks, callbackMsg)
+                    XCTAssertNil(delegate.receivedData) // No body for HEAD requests
+
+                default:
+                    let callbacks = [
+                        "urlSession(_:task:willPerformHTTPRedirection:newRequest:completionHandler:)",
+                        "urlSession(_:dataTask:didReceive:completionHandler:)",
+                        "urlSession(_:dataTask:didReceive:)",
+                        "urlSession(_:task:didCompleteWithError:)",
+                    ]
+                    XCTAssertEqual(delegate.callbacks.count, 4, "Callback count for \(testMethod)")
+                    XCTAssertEqual(delegate.callbacks, callbacks, callbackMsg)
+
+                    let contentLength = Int(httpResponse?.value(forHTTPHeaderField: "Content-Length") ?? "")
+                    let body = "Redirecting to \(method) jsonBody"
+                    XCTAssertEqual(contentLength, body.count)
+                    XCTAssertEqual(delegate.receivedData?.count, body.count)
+
+                    if let data = delegate.receivedData, let string = String(data: data, encoding: .utf8) {
+                        XCTAssertEqual(string, body)
+                    } else {
+                        XCTFail("No string body for \(testMethod)")
+                }
+            }
+        }
+    }
+
+    func test_httpRedirectDontFollowIgnoringHandler() throws {
+        let statusCode = 302
+        for method in httpMethods {
+            let testMethod = "\(method) request with statusCode \(statusCode)"
+            let urlString = "http://127.0.0.1:\(TestURLSession.serverPort)/\(statusCode)?location=jsonBody"
+            let url = try XCTUnwrap(URL(string: urlString), "Cant create URL for \(testMethod)")
+            var request = URLRequest(url: url)
+            request.httpMethod = method
+            let expect = expectation(description: "\(method) \(urlString): with HTTP redirection")
+            expect.isInverted = true
+            let delegate = SessionDelegate(with: expect)
+            delegate.redirectionHandler = { (response: HTTPURLResponse, request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) in
+                // Dont follow the request by not calling the completion handler at all
+            }
+            delegate.run(with: request, timeoutInterval: 1)
+
+            waitForExpectations(timeout: 2)
+            XCTAssertNil(delegate.error)
+            XCTAssertNil(delegate.receivedData)
+            XCTAssertNil(delegate.response)
+            XCTAssertEqual(delegate.redirectionResponse?.statusCode, statusCode, "HTTP redirection response code is invalid for \(testMethod)")
+
+            let callbackMsg = "Bad callback for \(testMethod)"
+            XCTAssertEqual(delegate.callbacks.count, 1, "Callback count for \(testMethod)")
+            XCTAssertEqual(delegate.callbacks, ["urlSession(_:task:willPerformHTTPRedirection:newRequest:completionHandler:)"], callbackMsg)
+        }
+    }
+
     func test_httpRedirectionWithCompleteRelativePath() {
         let urlString = "http://127.0.0.1:\(TestURLSession.serverPort)/UnitedStates"
         let url = URL(string: urlString)!
@@ -403,6 +720,34 @@ class TestURLSession : LoopbackServerTest {
         }
         task.resume()
         waitForExpectations(timeout: 12)
+    }
+
+    func test_httpNotFound() throws {
+        let urlString = "http://127.0.0.1:\(TestURLSession.serverPort)/404"
+        let url = try XCTUnwrap(URL(string: urlString))
+
+        let delegate = SessionDelegate(with: expectation(description: "GET \(urlString): with a delegate"))
+        delegate.run(with: url)
+
+        waitForExpectations(timeout: 4)
+        XCTAssertNil(delegate.error)
+        XCTAssertNotNil(delegate.response)
+        let httpResponse = delegate.response as? HTTPURLResponse
+        XCTAssertEqual(httpResponse?.statusCode, 404)
+
+        XCTAssertEqual(delegate.callbacks.count, 3)
+        let callbacks = ["urlSession(_:dataTask:didReceive:completionHandler:)",
+                         "urlSession(_:dataTask:didReceive:)",
+                         "urlSession(_:task:didCompleteWithError:)"
+        ]
+        XCTAssertEqual(delegate.callbacks, callbacks)
+
+        XCTAssertNotNil(delegate.receivedData)
+        if let data = delegate.receivedData, let jsonBody = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: String] {
+            XCTAssertEqual(jsonBody["uri"], "GET /404 HTTP/1.1")
+        } else {
+            XCTFail("Could not decode body as JSON")
+        }
     }
 
     func test_http0_9SimpleResponses() {
@@ -533,6 +878,93 @@ class TestURLSession : LoopbackServerTest {
         task.resume()
         waitForExpectations(timeout: 20)
     }
+
+    func test_requestWithEmptyBody() throws {
+        for method in httpMethods {
+            let urlString = "http://127.0.0.1:\(TestURLSession.serverPort)/" + method.lowercased()
+            let url = try XCTUnwrap(URL(string: urlString))
+
+            let session = URLSession(configuration: .default, delegate: nil, delegateQueue: nil)
+            var request = URLRequest(url: url)
+            request.httpMethod = method
+            let expect = expectation(description: "\(method) \(urlString)")
+
+            let task = session.dataTask(with: request) { (data, response, error) in
+                defer { expect.fulfill() }
+
+                XCTAssertNil(error)
+                guard let httpResponse = try? XCTUnwrap(response as? HTTPURLResponse) else {
+                    XCTFail("Response should be a non-nil HTTPURLResponse for \(method) request")
+                    return
+                }
+                XCTAssertEqual(httpResponse.statusCode, 200, "\(method)")
+
+                if method == "HEAD" { return }  // HEAD requests return no body
+
+                guard let data = data,
+                    let jsonBody = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: String] else {
+                        XCTFail("No JSON body for \(method) request")
+                        return
+                }
+                let uri = "\(method) /" + method.lowercased() + " HTTP/1.1"
+                XCTAssertEqual(jsonBody["uri"], uri)
+
+                if method == "GET" {
+                    XCTAssertNil(jsonBody["Content-Length"], "Unexpected Content-Length for \(method) request")
+                } else {
+                    XCTAssertEqual(jsonBody["Content-Length"], "0", "Bad Content-Length for \(method) request")
+                }
+            }
+            task.resume()
+            waitForExpectations(timeout: 3)
+        }
+    }
+
+
+    func test_requestWithNonEmptyBody() throws {
+        let bodyData = try XCTUnwrap("This is a request body".data(using: .utf8))
+        for method in httpMethods {
+            let urlString = "http://127.0.0.1:\(TestURLSession.serverPort)/" + method.lowercased()
+            let url = try XCTUnwrap(URL(string: urlString))
+
+            let session = URLSession(configuration: .default, delegate: nil, delegateQueue: nil)
+            var request = URLRequest(url: url)
+            request.httpMethod = method
+            request.httpBody = bodyData
+            let expect = expectation(description: "\(method) \(urlString)")
+
+            let task = session.dataTask(with: request) { (data, response, error) in
+                defer { expect.fulfill() }
+
+                if method == "GET" {
+                    XCTAssertNotNil(error)
+                    XCTAssertNil(data)
+                    XCTAssertNil(response)
+                } else {
+                    XCTAssertNil(error)
+
+                    guard let httpResponse = try? XCTUnwrap(response as? HTTPURLResponse) else {
+                        XCTFail("Response should be a non-nil HTTPURLResponse for \(method) request")
+                        return
+                    }
+                    XCTAssertEqual(httpResponse.statusCode, 200, "\(method)")
+
+                    if method == "HEAD" { return }  // HEAD requests return no body
+                    guard let data = data,
+                        let jsonBody = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: String] else {
+                        XCTFail("No JSON body for \(method) request")
+                        return
+                    }
+                    let uri = "\(method) /" + method.lowercased() + " HTTP/1.1"
+                    XCTAssertEqual(jsonBody["uri"], uri)
+                    XCTAssertEqual(jsonBody["Content-Length"], "\(bodyData.count)", "Bad Content-Length for \(method) request")
+                }
+            }
+            task.resume()
+            waitForExpectations(timeout: 3)
+        }
+    }
+
 
     func test_concurrentRequests() {
         // "10 tasks ought to be enough for anybody"
@@ -1004,7 +1436,7 @@ class TestURLSession : LoopbackServerTest {
             callbackCount += 1
             XCTAssertNotNil(error)
             if let urlError = error as? URLError {
-                XCTAssertNotEqual(urlError._nsError.code, NSURLErrorCancelled)
+                XCTAssertEqual(urlError._nsError.code, NSURLErrorCancelled)
             }
 
             if callbackCount == 1 {
@@ -1059,23 +1491,42 @@ class TestURLSession : LoopbackServerTest {
     }
     
     func test_simpleUploadWithDelegateProvidingInputStream() throws {
-        let delegate = HTTPUploadDelegate()
-        let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
-        let urlString = "http://127.0.0.1:\(TestURLSession.serverPort)/upload"
-        var request = URLRequest(url: URL(string: urlString)!)
-        request.httpMethod = "PUT"
-        
-        delegate.uploadCompletedExpectation = expectation(description: "PUT \(urlString): Upload data")
-        
-        
+
         let fileData = Data(count: 16*1024)
-        let stream = InputStream(data: fileData)
-        stream.open()
-        delegate.streamToProvideOnRequest = stream
-        
-        let task = session.uploadTask(withStreamedRequest: request)
-        task.resume()
-        waitForExpectations(timeout: 20)
+        for method in httpMethods {
+            let delegate = HTTPUploadDelegate()
+            let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+            let urlString = "http://127.0.0.1:\(TestURLSession.serverPort)/" + method.lowercased()
+            var request = URLRequest(url: try XCTUnwrap(URL(string: urlString)))
+            request.httpMethod = method
+
+            let stream = InputStream(data: fileData)
+
+            let expect = expectation(description: "\(method) \(urlString): Upload data")
+            if method == "GET" || method == "HEAD" { expect.isInverted = true }
+            delegate.uploadCompletedExpectation = expect
+            delegate.streamToProvideOnRequest = stream
+            let task = session.uploadTask(withStreamedRequest: request)
+            task.resume()
+
+            waitForExpectations(timeout: 5)
+            switch method {
+                case "GET":
+                    XCTAssertEqual(delegate.callbacks.count, 1, "Callback count for GET request")
+                    XCTAssertEqual(delegate.callbacks[0], "urlSession(_:task:needNewBodyStream:)")
+
+                case "HEAD":
+                    XCTAssertEqual(delegate.callbacks.count, 2, "Callback count for HEAD request")
+                    XCTAssertEqual(delegate.callbacks[0], "urlSession(_:task:needNewBodyStream:)")
+                    XCTAssertEqual(delegate.callbacks[1], "urlSession(_:task:didSendBodyData:totalBytesSent:totalBytesExpectedToSend:)")
+
+                default:
+                    XCTAssertEqual(delegate.callbacks.count, 3, "Callback count for \(method) request")
+                    XCTAssertEqual(delegate.callbacks[0], "urlSession(_:task:needNewBodyStream:)")
+                    XCTAssertEqual(delegate.callbacks[1], "urlSession(_:task:didSendBodyData:totalBytesSent:totalBytesExpectedToSend:)")
+                    XCTAssertEqual(delegate.callbacks[2], "urlSession(_:dataTask:didReceive:)")
+            }
+        }
     }
     
     static var allTests: [(String, (TestURLSession) -> () throws -> Void)] {
@@ -1095,20 +1546,31 @@ class TestURLSession : LoopbackServerTest {
             ("test_taskError", test_taskError),
             ("test_taskCopy", test_taskCopy),
             ("test_cancelTask", test_cancelTask),
+            ("test_suspendResumeTask", test_suspendResumeTask),
             ("test_taskTimeout", test_taskTimeout),
             ("test_verifyRequestHeaders", test_verifyRequestHeaders),
             ("test_verifyHttpAdditionalHeaders", test_verifyHttpAdditionalHeaders),
             ("test_timeoutInterval", test_timeoutInterval),
+            ("test_httpRedirectionWithCode300", test_httpRedirectionWithCode300),
+            ("test_httpRedirectionWithCode301_302", test_httpRedirectionWithCode301_302),
+            ("test_httpRedirectionWithCode303", test_httpRedirectionWithCode303),
+            ("test_httpRedirectionWithCode304", test_httpRedirectionWithCode304),
+            ("test_httpRedirectionWithCode305_308", test_httpRedirectionWithCode305_308),
+            ("test_httpRedirectDontFollowUsingNil", test_httpRedirectDontFollowUsingNil),
+            ("test_httpRedirectDontFollowIgnoringHandler", test_httpRedirectDontFollowIgnoringHandler),
             ("test_httpRedirectionWithCompleteRelativePath", test_httpRedirectionWithCompleteRelativePath),
             ("test_httpRedirectionWithInCompleteRelativePath", test_httpRedirectionWithInCompleteRelativePath),
             ("test_httpRedirectionWithDefaultPort", test_httpRedirectionWithDefaultPort),
             ("test_httpRedirectionTimeout", test_httpRedirectionTimeout),
+            ("test_httpNotFound", test_httpNotFound),
             ("test_http0_9SimpleResponses", test_http0_9SimpleResponses),
             ("test_outOfRangeButCorrectlyFormattedHTTPCode", test_outOfRangeButCorrectlyFormattedHTTPCode),
             ("test_missingContentLengthButStillABody", test_missingContentLengthButStillABody),
             ("test_illegalHTTPServerResponses", test_illegalHTTPServerResponses),
             ("test_dataTaskWithSharedDelegate", test_dataTaskWithSharedDelegate),
-            // ("test_simpleUploadWithDelegate", test_simpleUploadWithDelegate), - Server needs modification
+            ("test_simpleUploadWithDelegate", test_simpleUploadWithDelegate),
+            ("test_requestWithEmptyBody", test_requestWithEmptyBody),
+            ("test_requestWithNonEmptyBody", test_requestWithNonEmptyBody),
             ("test_concurrentRequests", test_concurrentRequests),
             ("test_disableCookiesStorage", test_disableCookiesStorage),
             ("test_cookiesStorage", test_cookiesStorage),
@@ -1154,18 +1616,126 @@ extension SharedDelegate: URLSessionDownloadDelegate {
 
 
 class SessionDelegate: NSObject, URLSessionDelegate {
-    let invalidateExpectation: XCTestExpectation?
+    var expectation: XCTestExpectation! = nil
+    var session: URLSession! = nil
+    var task: URLSessionDataTask! = nil
+    var cancelExpectation: XCTestExpectation? = nil
+    var invalidateExpectation: XCTestExpectation? = nil
+
+    // Callbacks
+    typealias ChallengeHandler = (URLAuthenticationChallenge) -> (URLSession.AuthChallengeDisposition, URLCredential?)
+    var challengeHandler: ChallengeHandler? = nil
+
+    typealias RedirectionHandler = (HTTPURLResponse, URLRequest, @escaping (URLRequest?) -> Void) -> Void
+    var redirectionHandler: RedirectionHandler? = nil
+
+    private(set) var receivedData: Data?
+    private(set) var error: Error?
+    private(set) var response: URLResponse?
+    private(set) var redirectionResponse: HTTPURLResponse?
+    private(set) var callbacks: [String] = []
+    private(set) var authenticationChallenges: [URLAuthenticationChallenge] = []
+
+
+    init(with expectation: XCTestExpectation) {
+        self.expectation = expectation
+    }
+
     override init() {
         invalidateExpectation = nil
         super.init()
     }
+
     init(invalidateExpectation: XCTestExpectation) {
         self.invalidateExpectation = invalidateExpectation
     }
+
+    func run(with url: URL, timeoutInterval: Double = 3) {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = timeoutInterval
+        session = URLSession(configuration: config, delegate: self, delegateQueue: nil)
+        task = session.dataTask(with: url)
+        task.resume()
+    }
+
+    func run(with request: URLRequest, timeoutInterval: Double = 3) {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = timeoutInterval
+        session = URLSession(configuration: config, delegate: self, delegateQueue: nil)
+        task = session.dataTask(with: request)
+        task.resume()
+    }
+
     func urlSession(_ session: URLSession, didBecomeInvalidWithError error: Error?) {
+        callbacks.append(#function)
+        self.error = error
         invalidateExpectation?.fulfill()
     }
+
+    func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+        callbacks.append(#function)
+    }
 }
+
+extension SessionDelegate: URLSessionTaskDelegate {
+
+    public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        callbacks.append(#function)
+
+        self.error = error
+        expectation.fulfill()
+    }
+
+    public func urlSession(_ session: URLSession, task: URLSessionTask, needNewBodyStream completionHandler: @escaping (InputStream?) -> Void) {
+        callbacks.append(#function)
+    }
+
+    // HTTP Authentication Challenge
+    func urlSession(_ session: URLSession, task: URLSessionTask, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+        callbacks.append(#function)
+        authenticationChallenges.append(challenge)
+
+        if let handler = challengeHandler {
+            let (disposition, credentials) = handler(challenge)
+            completionHandler(disposition, credentials)
+        }
+    }
+
+    // HTTP Redirect
+    public func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
+        callbacks.append(#function)
+        redirectionResponse = response
+
+        if let handler = redirectionHandler {
+            handler(response, request, completionHandler)
+        } else {
+            completionHandler(request)
+        }
+    }
+}
+
+extension SessionDelegate: URLSessionDataDelegate {
+
+    public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        if callbacks.last != #function {
+            callbacks.append(#function)
+        }
+        if receivedData == nil {
+            receivedData = data
+        } else {
+            receivedData!.append(data)
+        }
+    }
+
+
+    public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
+        callbacks.append(#function)
+
+        self.response = response
+        completionHandler(.allow)
+    }
+}
+
 
 class DataTask : NSObject {
     let syncQ = dispatchQueueMake("org.swift.TestFoundation.TestURLSession.DataTask.syncQ")
@@ -1405,6 +1975,10 @@ class FailFastProtocol: URLProtocol {
         return request.url?.scheme == "failfast"
     }
 
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest {
+        return request
+    }
+
     override class func canInit(with task: URLSessionTask) -> Bool {
         guard let request = task.currentRequest else { return false }
         return canInit(with: request)
@@ -1418,14 +1992,18 @@ class FailFastProtocol: URLProtocol {
         // Intentionally blank
     }
 }
-class HTTPRedirectionDataTask : NSObject {
+
+class HTTPRedirectionDataTask: NSObject {
     let dataTaskExpectation: XCTestExpectation!
     var session: URLSession! = nil
     var task: URLSessionDataTask! = nil
     var cancelExpectation: XCTestExpectation?
-    
-    public var error = false
-    
+    private(set) var receivedData = Data()
+    private(set) var error: Error?
+    private(set) var response: URLResponse?
+    private(set) var redirectionResponse: HTTPURLResponse?
+    private var callbacks: [String] = []
+
     init(with expectation: XCTestExpectation) {
         dataTaskExpectation = expectation
     }
@@ -1440,7 +2018,7 @@ class HTTPRedirectionDataTask : NSObject {
     
     func run(with url: URL) {
         let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 8
+        config.timeoutIntervalForRequest = 4
         session = URLSession(configuration: config, delegate: self, delegateQueue: nil)
         task = session.dataTask(with: url)
         task.resume()
@@ -1449,39 +2027,60 @@ class HTTPRedirectionDataTask : NSObject {
     func cancel() {
         task.cancel()
     }
-}
 
-extension HTTPRedirectionDataTask : URLSessionDataDelegate {
-    public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
-        guard let httpresponse = response as? HTTPURLResponse else { fatalError() }
-        XCTAssertNotNil(response)
-        XCTAssertEqual(200, httpresponse.statusCode, "HTTP response code is not 200")
+    var callbackCount: Int { callbacks.count }
+
+    func callback(_ idx: Int) -> String? {
+        guard idx < callbacks.count else { return nil }
+        return callbacks[idx]
     }
 }
 
-extension HTTPRedirectionDataTask : URLSessionTaskDelegate {
+extension HTTPRedirectionDataTask: URLSessionDataDelegate {
+
+    public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        if callbacks.last != #function {
+            callbacks.append(#function)
+        }
+        receivedData.append(data)
+    }
+
+    public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
+        callbacks.append(#function)
+
+        self.response = response
+        completionHandler(.allow)
+    }
+}
+
+extension HTTPRedirectionDataTask: URLSessionTaskDelegate {
     public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        callbacks.append(#function)
         dataTaskExpectation.fulfill()
-        guard (error as? URLError) != nil else { return }
+
         if let cancellation = cancelExpectation {
             cancellation.fulfill()
         }
-        self.error = true
+        self.error = error
     }
     
     public func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
-        XCTAssertNotNil(response)
-        XCTAssertEqual(302, response.statusCode, "HTTP response code is not 302")
+        callbacks.append(#function)
+        redirectionResponse = response
+
         if let url = response.url, url.path.hasSuffix("/redirect-with-default-port") {
             XCTAssertEqual(request.url?.absoluteString, "http://127.0.0.1/redirected-with-default-port")
             // Don't follow the redirect as the test server is not running on port 80
-            return
+            completionHandler(nil)
+        } else {
+            completionHandler(request)
         }
-        completionHandler(request)
     }
 }
 
 class HTTPUploadDelegate: NSObject {
+    private(set) var callbacks: [String] = []
+
     var uploadCompletedExpectation: XCTestExpectation!
     var streamToProvideOnRequest: InputStream?
     var totalBytesSent: Int64 = 0
@@ -1489,10 +2088,14 @@ class HTTPUploadDelegate: NSObject {
 
 extension HTTPUploadDelegate: URLSessionTaskDelegate {
     func urlSession(_ session: URLSession, task: URLSessionTask, didSendBodyData bytesSent: Int64, totalBytesSent: Int64, totalBytesExpectedToSend: Int64) {
+        if callbacks.last != #function {
+            callbacks.append(#function)
+        }
         self.totalBytesSent = totalBytesSent
     }
     
     func urlSession(_ session: URLSession, task: URLSessionTask, needNewBodyStream completionHandler: @escaping (InputStream?) -> Void) {
+        callbacks.append(#function)
         if streamToProvideOnRequest == nil {
             XCTFail("This shouldn't have been invoked -- no stream was set.")
         }
@@ -1503,6 +2106,7 @@ extension HTTPUploadDelegate: URLSessionTaskDelegate {
 
 extension HTTPUploadDelegate: URLSessionDataDelegate {
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        callbacks.append(#function)
         XCTAssertEqual(self.totalBytesSent, 16*1024)
         uploadCompletedExpectation.fulfill()
     }
