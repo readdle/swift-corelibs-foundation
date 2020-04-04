@@ -133,7 +133,7 @@ internal class _HTTPURLProtocol: _NativeProtocol {
         }
         
         // We opt not to cache any requests or responses that contain authorization headers.
-        if httpResponse.allHeaderFields["WWW-Authenticate"] != nil ||
+        if httpResponse.allHeaderFields["Www-Authenticate"] != nil ||
            httpResponse.allHeaderFields["Proxy-Authenticate"] != nil ||
            httpRequest.allHTTPHeaderFields?["Authorization"] != nil ||
            httpRequest.allHTTPHeaderFields?["Proxy-Authorization"] != nil {

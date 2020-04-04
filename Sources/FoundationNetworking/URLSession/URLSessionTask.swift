@@ -774,11 +774,8 @@ extension _ProtocolClient : URLProtocolClient {
         let host = response.url?.host ?? ""
         let port = response.url?.port ?? 80        //we're doing http
         let _protocol = response.url?.scheme
-        if response.allHeaderFields["WWW-Authenticate"] != nil {
-            let wwwAuthHeaderValue = response.allHeaderFields["WWW-Authenticate"] as! String
-            let authMethod = wwwAuthHeaderValue.components(separatedBy: " ")[0]
-            let realm = String(String(wwwAuthHeaderValue.components(separatedBy: "realm=")[1].dropFirst()).dropLast())
-            return URLProtectionSpace(host: host, port: port, protocol: _protocol, realm: realm, authenticationMethod: authMethod)
+        if response.allHeaderFields["Www-Authenticate"] != nil {
+            return URLProtectionSpace.create(with: response)
         } else {
             return nil
         }

@@ -332,19 +332,95 @@ open class URLProtectionSpace : NSObject, NSCopying {
 
 extension URLProtectionSpace {
     //an internal helper to create a URLProtectionSpace from a HTTPURLResponse 
-    static func create(using response: HTTPURLResponse) -> URLProtectionSpace {
+    static func create(with response: HTTPURLResponse) -> URLProtectionSpace? {
         let host = response.url?.host ?? ""
-        let port = response.url?.port ?? 80        //HTTP
-        let _protocol = response.url?.scheme
-        guard let wwwAuthHeader = response.allHeaderFields["Www-Authenticate"] as? String else {
-            fatalError("Authentication failed but no Www-Authenticate header in response")
+
+        let scheme = response.url?.scheme
+
+        let port: Int = {
+            if let port = response.url?.port {
+                return port
+            }
+
+            switch scheme {
+            case "http":
+                return 80
+            case "https":
+                return 443
+            case "ftp":
+                return 21
+            default:
+                return 80
+            }
+        }()
+
+        // Assuming HTTPURLResponse does capitalization of standard headers
+        guard let authenticateValue = (response.allHeaderFields["Www-Authenticate"] as? String)?.lowercased() else {
+            return nil
         }
 
-        //The format of the authentication header is `<auth-scheme> realm="<realm value>"`
-        //Example: `Basic realm="Fake Realm"`
-        let authMethod = wwwAuthHeader.components(separatedBy: " ")[0]
-        let realm = String(String(wwwAuthHeader.components(separatedBy: "realm=")[1].dropFirst()).dropLast())
-        return URLProtectionSpace(host: host, port: port, protocol: _protocol, realm: realm, authenticationMethod: authMethod)
+        // Typical Www-Authenticate header is something like
+        //   Www-Authenticate: Digest realm="test", domain="/HTTP/Digest", nonce="e3d002b9b2080453fdacea2d89f2d102"
+
+        let components = authenticateValue.components(separatedBy: " ")
+        let authMethod: String? = {
+            guard let authMethod = components.first else {
+                return nil
+            }
+
+            switch authMethod {
+            case "basic":
+                return NSURLAuthenticationMethodHTTPBasic
+            case "digest":
+                return NSURLAuthenticationMethodHTTPDigest
+            case "ntlm":
+                return NSURLAuthenticationMethodNTLM
+            case "negotiate":
+                return NSURLAuthenticationMethodNegotiate
+            default:
+                return nil
+            }
+        }()
+
+        let realm: String? = {
+            guard let openingQuoteIndex = authenticateValue.range(of: "realm=\"", options: .caseInsensitive)?.upperBound else {
+                return nil
+            }
+
+            // Basic implementation.
+            // Doesn't follow complete spec of quoted strings (RFC-7230, p. 3.2.6).
+            // Handles escaping of quotes only.
+            
+            let realmStart = openingQuoteIndex
+
+            guard let closingQuoteIndex = { () -> String.Index? in
+                var searchFrom = realmStart
+                while(true) {
+                    // Look for quote
+                    guard let quoteRange = authenticateValue.range(of: "\"", range: searchFrom..<authenticateValue.endIndex) else {
+                        return nil
+                    }
+                    // Check is it escaped
+                    guard authenticateValue[authenticateValue.index(before: quoteRange.lowerBound)] != "\\" else {
+                        searchFrom = quoteRange.upperBound
+                        continue
+                    }
+                    return quoteRange.lowerBound
+                }
+            }() else {
+                return nil
+            }
+
+            let quotedRealm = authenticateValue[realmStart..<closingQuoteIndex]
+            let realm = quotedRealm.replacingOccurrences(of: "\\\"", with: "\"")
+            return realm
+        }()
+
+        return URLProtectionSpace(host: host,
+                                  port: port,
+                                  protocol: scheme,
+                                  realm: realm,
+                                  authenticationMethod: authMethod)
     }
 }
 
