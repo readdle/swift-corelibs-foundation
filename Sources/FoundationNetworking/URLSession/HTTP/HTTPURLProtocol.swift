@@ -25,6 +25,7 @@ internal class _HTTPURLProtocol: _NativeProtocol {
     // and the 3xx response is returned to the client and the data is sent via the delegate notify
     // mechanism. `lastRedirectBody` holds the body of the redirect currently being processed.
     var lastRedirectBody: Data? = nil
+    private var redirectCount = 0
 
     public required init(task: URLSessionTask, cachedResponse: CachedURLResponse?, client: URLProtocolClient?) {
         super.init(task: task, cachedResponse: cachedResponse, client: client)
@@ -376,8 +377,12 @@ internal class _HTTPURLProtocol: _NativeProtocol {
         }
         let customHeaders: [String]
         let headersForRequest = curlHeaders(for: httpHeaders)
-        if ((request.httpMethod == "POST") && (request.httpBody?.count ?? 0 > 0)
-            && (request.value(forHTTPHeaderField: "Content-Type") == nil)) {
+        var hasStream = (request.httpBodyStream != nil)
+        if case _Body.stream(_) = body {
+            hasStream = true
+        }
+        if (request.httpMethod == "POST") && (request.value(forHTTPHeaderField: "Content-Type") == nil)
+            && ((request.httpBody?.count ?? 0 > 0) || hasStream) {
             customHeaders = headersForRequest + ["Content-Type:application/x-www-form-urlencoded"]
         } else {
             customHeaders = headersForRequest
@@ -436,11 +441,22 @@ internal class _HTTPURLProtocol: _NativeProtocol {
     }
 
     override func redirectFor(request: URLRequest) {
-        //TODO: Should keep track of the number of redirects that this
-        // request has gone through and err out once it's too large, i.e.
-        // call into `failWith(errorCode: )` with NSURLErrorHTTPTooManyRedirects
         guard case .transferCompleted(response: let response, bodyDataDrain: let bodyDataDrain) = self.internalState else {
             fatalError("Trying to redirect, but the transfer is not complete.")
+        }
+
+        // Avoid a never ending redirect chain by having a hard limit on the number of redirects.
+        // This value mirrors Darwin.
+        redirectCount += 1
+        if redirectCount > 16 {
+            self.internalState = .transferFailed
+            let error = NSError(domain: NSURLErrorDomain, code: NSURLErrorHTTPTooManyRedirects,
+                                userInfo: [NSLocalizedDescriptionKey: "too many HTTP redirects"])
+            guard let request = task?.currentRequest else {
+                fatalError("In a redirect chain but no current task/request")
+            }
+            failWith(error: error, request: request)
+            return
         }
 
         guard let session = task?.session as? URLSession else { fatalError() }
@@ -695,8 +711,9 @@ internal extension _HTTPURLProtocol {
 
         guard let urlString = components.string else { fatalError("Invalid URL") }
         request.url = URL(string: urlString)
-        let timeSpent = easyHandle.getTimeoutIntervalSpent()
-        request.timeoutInterval = fromRequest.timeoutInterval - timeSpent
+
+        // Inherit the timeout from the previous request
+        request.timeoutInterval = fromRequest.timeoutInterval
         return request
     }
 }

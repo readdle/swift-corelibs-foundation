@@ -563,6 +563,11 @@ struct _HTTPRequest {
                 headerDict[parts[0]] = parts[1].trimmingCharacters(in: CharacterSet(charactersIn: " "))
             }
         }
+
+        // Include the body as a Base64 Encoded entry
+        if let bodyData = messageData ?? messageBody?.data(using: .utf8) {
+            headerDict["x-base64-body"] = bodyData.base64EncodedString()
+        }
         return try JSONSerialization.data(withJSONObject: headerDict, options: .sortedKeys)
     }
 }
@@ -715,6 +720,14 @@ public class TestURLSessionServer {
         if uri == "/delete" {
             guard request.method == .DELETE else { return try _HTTPResponse(response: .METHOD_NOT_ALLOWED, body: "Method not allowed") }
             return try headersAsJSONResponse()
+        }
+
+        if uri.hasPrefix("/redirect/") {
+            let components = uri.components(separatedBy: "/")
+            if components.count >= 3, let count = Int(components[2]) {
+                let newLocation = (count <= 1) ? "/jsonBody" : "/redirect/\(count - 1)"
+                return try _HTTPResponse(response: .FOUND, headers: "Location: \(newLocation)", body: "Redirecting to \(newLocation)")
+            }
         }
 
         if uri == "/upload" {
