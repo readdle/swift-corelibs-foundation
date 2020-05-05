@@ -964,7 +964,7 @@ open class OperationQueue : NSObject, ProgressReporting {
         op.start()
         OperationQueue._currentQueue.clear()
         // We've just cleared _currentQueue storage.
-        // NSThreadSpecific doesn't release stored value before clear.
+        // NSThreadSpecific doesn't release stored value on clear.
         // This means `self` will leak if we don't release manually.
         Unmanaged.passUnretained(self).release()
         

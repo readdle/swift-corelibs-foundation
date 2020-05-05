@@ -55,7 +55,12 @@ class TestOperationQueue : XCTestCase {
         queue.addOperation(op2)
         queue.addOperation(op3)
         XCTAssertEqual(queue.operationCount, 2)
-        XCTAssertEqual(queue.operations.count, 2)
+        let operations = queue.operations
+        XCTAssertEqual(operations.count, 2)
+        if (operations.count == 2) {
+            XCTAssertEqual(operations[0], op2)
+            XCTAssertEqual(operations[1], op3)
+        }
         queue.waitUntilAllOperationsAreFinished()
         XCTAssertEqual(queue.operationCount, 0)
         XCTAssertEqual(queue.operations.count, 0)
@@ -547,6 +552,11 @@ class TestOperationQueue : XCTestCase {
         let op1 = BlockOperation { Thread.sleep(forTimeInterval: 1) }
         queue1.addOperation(op1)
         op1.waitUntilFinished()
+        
+        // Operation is not removed from Queue simultaneously
+        // with transitioning to "Finished" state. Wait a bit
+        // to allow OperationQueue to deal with finished op.
+        Thread.sleep(forTimeInterval: 0.1)
         XCTAssertEqual(queue1.operationCount, 0)
     }
 
@@ -656,7 +666,7 @@ class TestOperationQueue : XCTestCase {
         }()
 
         wait(for: [opStarted], timeout: 1)
-        op2.cancel() // op2
+        op2.cancel()
         wait(for: [opDone], timeout: 1)
 
         Thread.sleep(forTimeInterval: 1) // Let queue to be deallocated
