@@ -65,12 +65,14 @@ open class DateFormatter : Formatter {
 
         // range.length is updated with the last position of the input string that was parsed
         guard let swiftRange = Range(NSRange(range), in: string) else {
-            preconditionFailure("Incorrect range \(range) in \(string)")
+            fatalError("Incorrect range \(range) in \(string)")
         }
+        
+        // Apple DateFormatter implementation returns nil
+        // if non-whitespace sharacters are left after parsed content.
         let remainder = String(string[swiftRange.upperBound...])
         let characterSet = CharacterSet(charactersIn: remainder)
         guard CharacterSet.whitespaces.isSuperset(of: characterSet) else {
-            // Non-whitespace characters left after parsing
             return nil
         }
         return date

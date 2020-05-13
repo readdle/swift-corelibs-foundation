@@ -419,6 +419,7 @@ class TestDateFormatter: XCTestCase {
         let d1 = try XCTUnwrap(formatter.date(from: "2018-03-09"))
         XCTAssertEqual(d1.description, "2018-03-09 00:00:00 +0000")
 
+        // DateFormatter should allow any kind of whitespace before and after parsed content
         let whitespaces = " \t\u{00a0}\u{1680}\u{2000}\u{2001}\u{2002}\u{2003}\u{2004}\u{2005}\u{2006}\u{2007}\u{2008}\u{2009}\u{200a}\u{202f}\u{205f}\u{3000}"
         let d1Prefix = try XCTUnwrap(formatter.date(from: "\(whitespaces)2018-03-09"))
         XCTAssertEqual(d1.description, d1Prefix.description)
