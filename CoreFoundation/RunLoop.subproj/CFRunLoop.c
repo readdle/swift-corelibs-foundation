@@ -2874,6 +2874,16 @@ static int32_t __CFRunLoopRun(CFRunLoopRef rl, CFRunLoopModeRef rlm, CFTimeInter
 #if TARGET_OS_WIN32 || TARGET_OS_LINUX
             void *msg = 0;
 #endif
+
+#if TARGET_OS_WIN32
+            // Dispatch sets this event to notify us about
+            // pending work on main queue.
+            // We should consume it properly, or CFRunLoop will
+            // immediately poke empty main queue on next run(s)
+            // and exit without any actual work done.
+            ResetEvent(dispatchPort);
+#endif
+
             cf_trace(KDEBUG_EVENT_CFRL_IS_CALLING_DISPATCH | DBG_FUNC_START, rl, rlm, msg, livePort);
             __CFRUNLOOP_IS_SERVICING_THE_MAIN_DISPATCH_QUEUE__(msg);
             cf_trace(KDEBUG_EVENT_CFRL_IS_CALLING_DISPATCH | DBG_FUNC_END, rl, rlm, msg, livePort);
