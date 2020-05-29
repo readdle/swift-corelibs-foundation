@@ -3937,14 +3937,14 @@ static CFArrayRef WindowsPathToURLComponents(CFStringRef path, CFAllocatorRef al
     CFRelease(tmp);
 
     if (isDir == FALSE) {
-        CFIndex last = CFArrayGetCount(urlComponents) - 1;
-        if (CFEqual(CFArrayGetValueAtIndex(urlComponents, last), CFSTR(""))) {
-            CFArrayRemoveValueAtIndex(urlComponents, last);
-        }
+      CFIndex last = CFArrayGetCount(urlComponents) - 1;
+      if (CFEqual(CFArrayGetValueAtIndex(urlComponents, last), CFSTR(""))) {
+        CFArrayRemoveValueAtIndex(urlComponents, last);
+      }
     }
 
-    CFStringRef firstComponent = (CFStringRef)CFArrayGetValueAtIndex(urlComponents, 0);
-    if (isAbsolute && CFStringGetLength(firstComponent) == 2 && CFStringGetCharacterAtIndex(firstComponent, 1) == ':') {
+    CFStringRef str = (CFStringRef)CFArrayGetValueAtIndex(urlComponents, 0);
+    if (isAbsolute && CFStringGetLength(str) == 2 && CFStringGetCharacterAtIndex(str, 1) == ':') {
         i = 1; // Skip over the drive letter 
     }
     CFIndex c;
@@ -3967,17 +3967,11 @@ static CFArrayRef WindowsPathToURLComponents(CFStringRef path, CFAllocatorRef al
             CFArrayAppendValue(urlComponents, CFSTR(""));
     }
     if (isAbsolute) {
-        CFStringRef prefix = AddAuthorityToFileURL() ? CFSTR(FILE_PREFIX_WITH_AUTHORITY) : CFSTR(FILE_PREFIX);
-        
-        // Leading "\" in path produces "" as fist component of CFStringCreateArrayBySeparatingStrings result.
-        // In such case we should not prepend prefix, as empty string in the middle of array
-        // produces additional separator after concatenation back into path string.
-        
-        if (CFStringGetLength(firstComponent) == 0) {
-            CFArraySetValueAtIndex(urlComponents, 0, prefix);
+        if ( AddAuthorityToFileURL() ) {
+            CFArrayInsertValueAtIndex(urlComponents, 0, CFSTR(FILE_PREFIX_WITH_AUTHORITY));
         }
         else {
-            CFArrayInsertValueAtIndex(urlComponents, 0, prefix);
+            CFArrayInsertValueAtIndex(urlComponents, 0, CFSTR(FILE_PREFIX));
         }
     }
     return urlComponents;
