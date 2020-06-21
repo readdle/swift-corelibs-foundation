@@ -458,6 +458,9 @@ extension String {
         #endif
     }
 
+    public init(_ cocoaString: NSString) {
+        self = cocoaString._storage
+    }
 }
 
 extension StringProtocol where Index == String.Index {
@@ -1892,6 +1895,14 @@ extension StringProtocol {
         fatalError("unavailable function can't be called")
     }
 
+}
+
+// Old method names
+extension NSString {
+    @available(*, unavailable, renamed: "path(withComponents:)")
+    public static func pathWithComponents(_ components: [String]) -> String {
+        fatalError("unavailable function can't be called")
+    }
 }
 
 // Pre-Swift-3 method names
