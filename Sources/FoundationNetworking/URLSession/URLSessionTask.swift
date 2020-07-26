@@ -791,7 +791,9 @@ extension _ProtocolClient : URLProtocolClient {
                     let proposedCredential: URLCredential?
                     let last = task._protocolLock.performLocked { task._lastCredentialUsedFromStorageDuringAuthentication }
                     
-                    if last?.credential != credential {
+                    if last?.credential != nil && credential == nil {
+                        proposedCredential = last?.credential
+                    } else if last?.credential != credential {
                         proposedCredential = credential
                     } else {
                         proposedCredential = nil
@@ -848,47 +850,7 @@ extension _ProtocolClient : URLProtocolClient {
             }
         }
         
-        switch session.behaviour(for: task) {
-        case .taskDelegate(let delegate):
-            if let downloadDelegate = delegate as? URLSessionDownloadDelegate, let downloadTask = task as? URLSessionDownloadTask {
-                session.delegateQueue.addOperation {
-                    downloadDelegate.urlSession(session, downloadTask: downloadTask, didFinishDownloadingTo: urlProtocol.properties[URLProtocol._PropertyKey.temporaryFileURL] as! URL)
-                }
-            }
-            session.delegateQueue.addOperation {
-                guard task.state != .completed else { return }
-                delegate.urlSession(session, task: task, didCompleteWithError: nil)
-                task.state = .completed
-                session.workQueue.async {
-                    session.taskRegistry.remove(task)
-                }
-            }
-        case .noDelegate:
-            guard task.state != .completed else { break }
-            task.state = .completed
-            session.workQueue.async {
-                session.taskRegistry.remove(task)
-            }
-        case .dataCompletionHandler(let completion):
-            session.delegateQueue.addOperation {
-                guard task.state != .completed else { return }
-                completion(urlProtocol.properties[URLProtocol._PropertyKey.responseData] as? Data ?? Data(), task.response, nil)
-                task.state = .completed
-                session.workQueue.async {
-                    session.taskRegistry.remove(task)
-                }
-            }
-        case .downloadCompletionHandler(let completion):
-            session.delegateQueue.addOperation {
-                guard task.state != .completed else { return }
-                completion(urlProtocol.properties[URLProtocol._PropertyKey.temporaryFileURL] as? URL, task.response, nil)
-                task.state = .completed
-                session.workQueue.async {
-                    session.taskRegistry.remove(task)
-                }
-            }
-        }
-        task._invalidateProtocol()
+        urlProtocolDidComplete(urlProtocol)
     }
 
     func urlProtocol(_ protocol: URLProtocol, didCancel challenge: URLAuthenticationChallenge) {
@@ -925,14 +887,21 @@ extension _ProtocolClient : URLProtocolClient {
         }
         
         func attemptProceedingWithDefaultCredential() {
-            if let credential = challenge.proposedCredential {
-                let last = task._protocolLock.performLocked { task._lastCredentialUsedFromStorageDuringAuthentication }
-                
-                if last?.credential != credential {
-                    proceed(using: credential)
-                } else {
-                    task.cancel()
+            let credential: URLCredential? = {
+                guard let proposedCredential = challenge.proposedCredential else {
+                    return nil
                 }
+                let last = task._protocolLock.performLocked { task._lastCredentialUsedFromStorageDuringAuthentication }
+                guard proposedCredential != last?.credential else {
+                    return nil
+                }
+                return proposedCredential
+            }()
+
+            if let credential = credential {
+                proceed(using: credential)
+            } else {
+                urlProtocolDidComplete(`protocol`)
             }
         }
         
@@ -1036,6 +1005,54 @@ extension _ProtocolClient : URLProtocolClient {
     func urlProtocol(_ protocol: URLProtocol, wasRedirectedTo request: URLRequest, redirectResponse: URLResponse) {
         fatalError("The URLSession swift-corelibs-foundation implementation doesn't currently handle redirects directly.")
     }
+
+    private func urlProtocolDidComplete(_ urlProtocol: URLProtocol) {
+        guard let task = urlProtocol.task else { fatalError("Received response, but there's no task.") }
+        guard let session = task.session as? URLSession else { fatalError("Task not associated with URLSession.") }
+
+        switch session.behaviour(for: task) {
+        case .taskDelegate(let delegate):
+            if let downloadDelegate = delegate as? URLSessionDownloadDelegate, let downloadTask = task as? URLSessionDownloadTask {
+                session.delegateQueue.addOperation {
+                    downloadDelegate.urlSession(session, downloadTask: downloadTask, didFinishDownloadingTo: urlProtocol.properties[URLProtocol._PropertyKey.temporaryFileURL] as! URL)
+                }
+            }
+            session.delegateQueue.addOperation {
+                guard task.state != .completed else { return }
+                task.state = .completed
+                delegate.urlSession(session, task: task, didCompleteWithError: nil)
+                session.workQueue.async {
+                    session.taskRegistry.remove(task)
+                }
+            }
+        case .noDelegate:
+            guard task.state != .completed else { break }
+            task.state = .completed
+            session.workQueue.async {
+                session.taskRegistry.remove(task)
+            }
+        case .dataCompletionHandler(let completion):
+            session.delegateQueue.addOperation {
+                guard task.state != .completed else { return }
+                completion(urlProtocol.properties[URLProtocol._PropertyKey.responseData] as? Data ?? Data(), task.response, nil)
+                task.state = .completed
+                session.workQueue.async {
+                    session.taskRegistry.remove(task)
+                }
+            }
+        case .downloadCompletionHandler(let completion):
+            session.delegateQueue.addOperation {
+                guard task.state != .completed else { return }
+                completion(urlProtocol.properties[URLProtocol._PropertyKey.temporaryFileURL] as? URL, task.response, nil)
+                task.state = .completed
+                session.workQueue.async {
+                    session.taskRegistry.remove(task)
+                }
+            }
+        }
+        task._invalidateProtocol()
+    }
+
 }
 extension URLSessionTask {
     typealias _AuthHandler = ((URLSessionTask, URLSession.AuthChallengeDisposition, URLCredential?) -> ())
