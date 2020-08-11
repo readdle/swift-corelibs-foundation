@@ -11,6 +11,22 @@ class TestURLSession: LoopbackServerTest {
 
     let httpMethods = ["HEAD", "GET", "PUT", "POST", "DELETE"]
 
+    func test_timeout() {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 8
+        let session = URLSession(configuration: config, delegate: nil, delegateQueue: nil)
+
+        let url = URL(string: "http://192.168.7.153")!
+        let request = URLRequest(url: url)
+
+        let callbackCalled = expectation(description: "Task callback called")
+        session.dataTask(with: request, completionHandler: { data, response, error in
+            callbackCalled.fulfill()
+        }).resume()
+        waitForExpectations(timeout: 10)
+        Thread.sleep(forTimeInterval: 5)
+    }
+
     func test_dataTaskWithURL() {
         let urlString = "http://127.0.0.1:\(TestURLSession.serverPort)/Nepal"
         let url = URL(string: urlString)!
@@ -1802,6 +1818,7 @@ class TestURLSession: LoopbackServerTest {
             ("test_sessionDelegateAfterInvalidateAndCancel", test_sessionDelegateAfterInvalidateAndCancel),
             ("test_getAllTasks", test_getAllTasks),
             ("test_getTasksWithCompletion", test_getTasksWithCompletion),
+            ("test_timeout", test_timeout),
             /* ⚠️ */ ("test_invalidResumeDataForDownloadTask",
             /* ⚠️ */   testExpectedToFail(test_invalidResumeDataForDownloadTask, "This test crashes nondeterministically: https://bugs.swift.org/browse/SR-11353")),
             /* ⚠️ */ ("test_simpleUploadWithDelegateProvidingInputStream",
