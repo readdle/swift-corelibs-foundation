@@ -7,7 +7,7 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 
-import CoreFoundation
+@_implementationOnly import CoreFoundation
 
 internal let kCFDateIntervalFormatterNoStyle = CFDateIntervalFormatterStyle.noStyle
 internal let kCFDateIntervalFormatterShortStyle = CFDateIntervalFormatterStyle.shortStyle
@@ -83,25 +83,28 @@ internal extension _CFDateIntervalFormatterBoundaryStyle {
 // DateIntervalFormatter returns nil and NO for all methods in Formatter.
 
 open class DateIntervalFormatter: Formatter {
-    let core: CFDateIntervalFormatter
+    var _core: AnyObject
+    var core: CFDateIntervalFormatter {
+        get { unsafeBitCast(_core, to: CFDateIntervalFormatter.self) }
+        set { _core = newValue }
+    }
     
     public override init() {
-        core = CFDateIntervalFormatterCreate(nil, nil, kCFDateIntervalFormatterShortStyle, kCFDateIntervalFormatterShortStyle)
+        _core = CFDateIntervalFormatterCreate(nil, nil, kCFDateIntervalFormatterShortStyle, kCFDateIntervalFormatterShortStyle)
         super.init()
     }
 
     private init(cfFormatter: CFDateIntervalFormatter) {
-        self.core = cfFormatter
+        self._core = cfFormatter
         super.init()
     }
     
     public required init?(coder: NSCoder) {
         guard coder.allowsKeyedCoding else { fatalError("Requires a keyed coding-capable archiver.") }
         
-        func cfObject<T: NSObject & _CFBridgeable>(of aClass: T.Type, from coder: NSCoder, forKey key: String) -> T.CFType? {
+        func object<T: NSObject>(of aClass: T.Type, from coder: NSCoder, forKey key: String) -> T? {
             if coder.containsValue(forKey: key) {
-                let object = coder.decodeObject(forKey: key) as? T
-                return object?._cfObject
+                return coder.decodeObject(forKey: key) as? T
             } else {
                 return nil
             }
@@ -111,14 +114,14 @@ open class DateIntervalFormatter: Formatter {
         _CFDateIntervalFormatterInitializeFromCoderValues(core,
                                                           coder.decodeInt64(forKey: "NS.dateStyle"),
                                                           coder.decodeInt64(forKey: "NS.timeStyle"),
-                                                          cfObject(of: NSString.self, from: coder, forKey: "NS.dateTemplate"),
-                                                          cfObject(of: NSString.self, from: coder, forKey: "NS.dateTemplateFromStyle"),
+                                                          object(of: NSString.self, from: coder, forKey: "NS.dateTemplate")?._cfObject,
+                                                          object(of: NSString.self, from: coder, forKey: "NS.dateTemplateFromStyle")?._cfObject,
                                                           coder.decodeBool(forKey: "NS.modified"),
                                                           coder.decodeBool(forKey: "NS.useTemplate"),
-                                                          cfObject(of: NSLocale.self, from: coder, forKey: "NS.locale"),
-                                                          cfObject(of: NSCalendar.self, from: coder, forKey: "NS.calendar"),
-                                                          cfObject(of: NSTimeZone.self, from: coder, forKey: "NS.timeZone"))
-        self.core = core
+                                                          object(of: NSLocale.self, from: coder, forKey: "NS.locale")?._cfObject,
+                                                          object(of: NSCalendar.self, from: coder, forKey: "NS.calendar")?._cfObject,
+                                                          object(of: NSTimeZone.self, from: coder, forKey: "NS.timeZone")?._cfObject)
+        self._core = core
         
         super.init(coder: coder)
     }

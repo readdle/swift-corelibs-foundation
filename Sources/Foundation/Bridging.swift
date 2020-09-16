@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import CoreFoundation
+@_implementationOnly import CoreFoundation
 
 #if canImport(ObjectiveC)
 import ObjectiveC
@@ -52,10 +52,6 @@ extension _StructTypeBridgeable {
 }
 
 // slated for removal, these are the swift-corelibs-only variant of the _ObjectiveCBridgeable
-internal protocol _CFBridgeable {
-    associatedtype CFType
-    var _cfObject: CFType { get }
-}
 
 internal protocol _SwiftBridgeable {
     associatedtype SwiftType
@@ -191,7 +187,7 @@ internal final class __SwiftValue : NSObject, NSCopying {
             if boxed is NSObject {
                 return boxed as! NSObject
             } else {
-                return __SwiftValue(value) // Do not emit native boxes — wrap them in Swift Foundation boxes instead.
+                return __SwiftValue(value) // Do not emit native boxes — wrap them in Swift Foundation boxes instead.                
             }
         }
     }

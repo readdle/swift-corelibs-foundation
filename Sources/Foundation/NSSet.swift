@@ -8,7 +8,7 @@
 //
 
 
-import CoreFoundation
+@_implementationOnly import CoreFoundation
 
 open class NSSet : NSObject, NSCopying, NSMutableCopying, NSSecureCoding, NSCoding {
     private let _cfinfo = _CFInfo(typeID: CFSetGetTypeID())
@@ -190,7 +190,7 @@ open class NSSet : NSObject, NSCopying, NSMutableCopying, NSSecureCoding, NSCodi
         return result
     }
     
-    override open var _cfTypeID: CFTypeID {
+    internal override var _cfTypeID: CFTypeID {
         return CFSetGetTypeID()
     }
 
@@ -334,7 +334,7 @@ open class NSSet : NSObject, NSCopying, NSMutableCopying, NSSecureCoding, NSCodi
     }
 }
 
-extension NSSet : _CFBridgeable, _SwiftBridgeable {
+extension NSSet : _SwiftBridgeable {
     internal var _cfObject: CFSet { return unsafeBitCast(self, to: CFSet.self) }
     internal var _swiftObject: Set<NSObject> { return Set._unconditionallyBridgeFromObjectiveC(self) }
 }
@@ -348,7 +348,7 @@ extension NSMutableSet {
     internal var _cfMutableObject: CFMutableSet { return unsafeBitCast(self, to: CFMutableSet.self) }
 }
 
-extension Set : _NSBridgeable, _CFBridgeable {
+extension Set : _NSBridgeable {
     internal var _nsObject: NSSet { return _bridgeToObjectiveC() }
     internal var _cfObject: CFSet { return _nsObject._cfObject }
 }

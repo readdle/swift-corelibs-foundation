@@ -8,7 +8,7 @@
 //
 
 
-import CoreFoundation
+@_implementationOnly import CoreFoundation
 import Dispatch
 
 open class NSDictionary : NSObject, NSCopying, NSMutableCopying, NSSecureCoding, NSCoding, ExpressibleByDictionaryLiteral {
@@ -573,12 +573,12 @@ open class NSDictionary : NSObject, NSCopying, NSMutableCopying, NSSecureCoding,
         return matching
     }
     
-    override open var _cfTypeID: CFTypeID {
+    internal override var _cfTypeID: CFTypeID {
         return CFDictionaryGetTypeID()
     }
 }
 
-extension NSDictionary : _CFBridgeable, _SwiftBridgeable {
+extension NSDictionary : _SwiftBridgeable {
     internal var _cfObject: CFDictionary { return unsafeBitCast(self, to: CFDictionary.self) }
     internal var _swiftObject: Dictionary<AnyHashable, Any> { return Dictionary._unconditionallyBridgeFromObjectiveC(self) }
 }
@@ -592,7 +592,7 @@ extension CFDictionary : _NSBridgeable, _SwiftBridgeable {
     internal var _swiftObject: [AnyHashable: Any] { return _nsObject._swiftObject }
 }
 
-extension Dictionary : _NSBridgeable, _CFBridgeable {
+extension Dictionary : _NSBridgeable {
     internal var _nsObject: NSDictionary { return _bridgeToObjectiveC() }
     internal var _cfObject: CFDictionary { return _nsObject._cfObject }
 }

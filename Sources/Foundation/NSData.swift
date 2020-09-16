@@ -7,7 +7,7 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 
-import CoreFoundation
+@_implementationOnly import CoreFoundation
 import Dispatch
 
 extension NSData {
@@ -69,8 +69,8 @@ open class NSData : NSObject, NSCopying, NSMutableCopying, NSSecureCoding {
     typealias CFType = CFData
 
     private var _base = _CFInfo(typeID: CFDataGetTypeID())
-    private var _length: CFIndex = 0
-    private var _capacity: CFIndex = 0
+    private var _length: Int = 0 // CFIndex
+    private var _capacity: Int = 0 // CFIndex
     private var _deallocator: UnsafeMutableRawPointer? = nil // for CF only
     private var _deallocHandler: _NSDataDeallocator? = _NSDataDeallocator() // for Swift
     private var _bytes: UnsafeMutablePointer<UInt8>? = nil
@@ -88,7 +88,7 @@ open class NSData : NSObject, NSCopying, NSMutableCopying, NSSecureCoding {
         return type(of: self) === NSData.self || type(of: self) === NSMutableData.self
     }
 
-    override open var _cfTypeID: CFTypeID {
+    internal override var _cfTypeID: CFTypeID {
         return CFDataGetTypeID()
     }
 
@@ -434,8 +434,7 @@ open class NSData : NSObject, NSCopying, NSMutableCopying, NSSecureCoding {
         }
 
         let fm = FileManager.default
-        // The destination file path may not exist so provide a default file permissions of RW user only
-        let permissions = (try? fm._permissionsOfItem(atPath: path)) ?? 0o600
+        let permissions = try? fm._permissionsOfItem(atPath: path)
 
         if writeOptionsMask.contains(.atomic) {
             let (newFD, auxFilePath) = try _NSCreateTemporaryFile(path)
@@ -446,7 +445,9 @@ open class NSData : NSObject, NSCopying, NSMutableCopying, NSSecureCoding {
                 // requires that there be no open handles to the file
                 fh.closeFile()
                 try _NSCleanupTemporaryFile(auxFilePath, path)
-                try fm.setAttributes([.posixPermissions: NSNumber(value: permissions)], ofItemAtPath: path)
+                if let permissions = permissions {
+                    try fm.setAttributes([.posixPermissions: NSNumber(value: permissions)], ofItemAtPath: path)
+                }
             } catch {
                 let savedErrno = errno
                 try? fm.removeItem(atPath: auxFilePath)
@@ -458,10 +459,23 @@ open class NSData : NSObject, NSCopying, NSMutableCopying, NSSecureCoding {
                 flags |= O_EXCL
             }
 
-            guard let fh = FileHandle(path: path, flags: flags, createMode: permissions) else {
+            // NOTE: Each flag such as `S_IRUSR` may be literal depends on the system.
+            // Without explicity type them as `Int`, type inference will not complete in reasonable time
+            // and the compiler will throw an error.
+#if os(Windows)
+            let createMode = Int(ucrt.S_IREAD) | Int(ucrt.S_IWRITE)
+#elseif canImport(Darwin)
+            let createMode = Int(S_IRUSR) | Int(S_IWUSR) | Int(S_IRGRP) | Int(S_IWGRP) | Int(S_IROTH) | Int(S_IWOTH)
+#else
+            let createMode = Int(Glibc.S_IRUSR) | Int(Glibc.S_IWUSR) | Int(Glibc.S_IRGRP) | Int(Glibc.S_IWGRP) | Int(Glibc.S_IROTH) | Int(Glibc.S_IWOTH)
+#endif
+            guard let fh = FileHandle(path: path, flags: flags, createMode: createMode) else {
                 throw _NSErrorWithErrno(errno, reading: false, path: path)
             }
             try doWrite(fh)
+            if let permissions = permissions {
+                try fm.setAttributes([.posixPermissions: NSNumber(value: permissions)], ofItemAtPath: path)
+            }
         }
     }
 
@@ -895,12 +909,12 @@ open class NSData : NSObject, NSCopying, NSMutableCopying, NSSecureCoding {
 }
 
 // MARK: -
-extension NSData : _CFBridgeable, _SwiftBridgeable {
+extension NSData : _SwiftBridgeable {
     typealias SwiftType = Data
     internal var _swiftObject: SwiftType { return Data(referencing: self) }
 }
 
-extension Data : _NSBridgeable, _CFBridgeable {
+extension Data : _NSBridgeable {
     typealias CFType = CFData
     typealias NSType = NSData
     internal var _cfObject: CFType { return _nsObject._cfObject }

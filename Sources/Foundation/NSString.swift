@@ -8,7 +8,7 @@
 //
 
 
-import CoreFoundation
+@_implementationOnly import CoreFoundation
 
 public typealias unichar = UInt16
 
@@ -358,7 +358,7 @@ open class NSString : NSObject, NSCopying, NSMutableCopying, NSSecureCoding, NSC
         return false
     }
     
-    override open var _cfTypeID: CFTypeID {
+    internal override var _cfTypeID: CFTypeID {
         return CFStringGetTypeID()
     }
   
@@ -1613,7 +1613,7 @@ extension String {
     }
 }
 
-extension NSString : _CFBridgeable, _SwiftBridgeable {
+extension NSString : _SwiftBridgeable {
     typealias SwiftType = String
     internal var _cfObject: CFString { return unsafeBitCast(self, to: CFString.self) }
     internal var _swiftObject: String { return String._unconditionallyBridgeFromObjectiveC(self) }
@@ -1630,7 +1630,7 @@ extension CFString : _NSBridgeable, _SwiftBridgeable {
     internal var _swiftObject: String { return _nsObject._swiftObject }
 }
 
-extension String : _NSBridgeable, _CFBridgeable {
+extension String : _NSBridgeable {
     typealias NSType = NSString
     typealias CFType = CFString
     internal var _nsObject: NSType { return _bridgeToObjectiveC() }

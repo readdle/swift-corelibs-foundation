@@ -7,7 +7,7 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 
-import CoreFoundation
+@_implementationOnly import CoreFoundation
 
 public typealias TimeInterval = Double
 
@@ -151,7 +151,7 @@ open class NSDate : NSObject, NSCopying, NSSecureCoding, NSCoding {
         return CFDateFormatterCreateStringWithDate(kCFAllocatorSystemDefault, dateFormatterRef, _cfObject)._swiftObject
     }
     
-    override open var _cfTypeID: CFTypeID {
+    internal override var _cfTypeID: CFTypeID {
         return CFDateGetTypeID()
     }
 }
@@ -231,7 +231,7 @@ extension NSDate {
     }
 }
 
-extension NSDate: _CFBridgeable, _SwiftBridgeable {
+extension NSDate: _SwiftBridgeable {
     typealias SwiftType = Date
     var _swiftObject: Date {
         return Date(timeIntervalSinceReferenceDate: timeIntervalSinceReferenceDate)
@@ -246,7 +246,7 @@ extension CFDate : _NSBridgeable, _SwiftBridgeable {
     internal var _swiftObject: Date { return _nsObject._swiftObject }
 }
 
-extension Date : _NSBridgeable, _CFBridgeable {
+extension Date : _NSBridgeable {
     typealias NSType = NSDate
     typealias CFType = CFDate
     
