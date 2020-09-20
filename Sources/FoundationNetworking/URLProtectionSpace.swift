@@ -355,7 +355,7 @@ extension URLProtectionSpace {
         }()
 
         // Assuming HTTPURLResponse does capitalization of standard headers
-        guard let authenticateValue = (response.allHeaderFields["Www-Authenticate"] as? String)?.lowercased() else {
+        guard let authenticateValue = (response.value(forHTTPHeaderField: "Www-Authenticate") as? String)?.lowercased() else {
             return nil
         }
 
