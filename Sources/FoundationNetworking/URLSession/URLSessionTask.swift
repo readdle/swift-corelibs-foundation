@@ -780,20 +780,12 @@ extension _ProtocolClient : URLProtocolClient {
         }
     }
 
-    func createProtectionSpace(_ response: HTTPURLResponse) -> URLProtectionSpace? {
-        if response.allHeaderFields["Www-Authenticate"] != nil {
-            return URLProtectionSpace.create(with: response)
-        } else {
-            return nil
-        }
-    }
-
     func urlProtocolDidFinishLoading(_ urlProtocol: URLProtocol) {
         guard let task = urlProtocol.task else { fatalError() }
         guard let session = task.session as? URLSession else { fatalError() }
         let urlResponse = task.response
         if let response = urlResponse as? HTTPURLResponse, response.statusCode == 401 {
-            if let protectionSpace = createProtectionSpace(response) {
+            if let protectionSpace = URLProtectionSpace.create(with: response) {
 
                 func proceed(proposing credential: URLCredential?) {
                     let proposedCredential: URLCredential?
@@ -905,10 +897,10 @@ extension _ProtocolClient : URLProtocolClient {
                 }
                 return proposedCredential
             }()
-
+                
             if let credential = credential {
-                proceed(using: credential)
-            } else {
+                    proceed(using: credential)
+                } else {
                 urlProtocolDidComplete(`protocol`)
             }
         }
