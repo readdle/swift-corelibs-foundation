@@ -343,7 +343,12 @@ internal class _HTTPURLProtocol: _NativeProtocol {
                 set(requestBodyLength: .length(length))
                 task!.countOfBytesExpectedToSend = Int64(length)
             case (_, nil):
-                set(requestBodyLength: .unknown)
+                if let contentLengthValue = request.value(forHTTPHeaderField: "Content-Length"), let contentLength = UInt64(contentLengthValue) {
+                    set(requestBodyLength: .length(contentLength))
+                    task!.countOfBytesExpectedToSend = Int64(contentLength)
+                } else {
+                    set(requestBodyLength: .unknown)
+                }
             }
         } catch let e {
             // Fail the request here.
