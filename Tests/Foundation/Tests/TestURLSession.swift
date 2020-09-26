@@ -101,6 +101,30 @@ class TestURLSession: LoopbackServerTest {
         waitForExpectations(timeout: 12)
     }
     
+    func test_dataTaskWithHttpInputStreamContentLength() throws {
+        let urlString = "http://127.0.0.1:\(TestURLSession.serverPort)/upload"
+        let url = try XCTUnwrap(URL(string: urlString))
+        
+        let dataString = "<?xml version=\"1.0\" encoding=\"utf-8\"?><soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:m=\"http://schemas.microsoft.com/exchange/services/2006/messages\" xmlns:t=\"http://schemas.microsoft.com/exchange/services/2006/types\"><soap:Body><m:SyncFolderHierarchy><m:FolderShape><t:BaseShape>IdOnly</t:BaseShape></m:FolderShape></m:SyncFolderHierarchy></soap:Body></soap:Envelope>"
+        
+        let data = try XCTUnwrap(dataString.data(using: .utf8))
+        
+        var urlRequest = URLRequest(url: url)
+        urlRequest.httpMethod = "POST"
+        urlRequest.httpBodyStream = InputStream(data: data)
+        urlRequest.setValue("\(data.count)", forHTTPHeaderField: "Content-Length")
+        
+        let delegate = SessionDelegate(with: expectation(description: "POST \(urlString): with HTTP Body as InputStream"))
+        delegate.run(with: urlRequest, timeoutInterval: 3)
+        waitForExpectations(timeout: 4)
+        
+        let httpResponse = delegate.response as? HTTPURLResponse
+        
+        XCTAssertNil(delegate.error)
+        XCTAssertNotNil(delegate.response)
+        XCTAssertEqual(httpResponse?.statusCode, 200)
+    }
+    
     func test_dataTaskWithHttpInputStream() throws {
         let urlString = "http://127.0.0.1:\(TestURLSession.serverPort)/jsonBody"
         let url = try XCTUnwrap(URL(string: urlString))
@@ -1779,6 +1803,7 @@ class TestURLSession: LoopbackServerTest {
             ("test_dataTaskWithURLRequest", test_dataTaskWithURLRequest),
             ("test_dataTaskWithURLCompletionHandler", test_dataTaskWithURLCompletionHandler),
             ("test_dataTaskWithURLRequestCompletionHandler", test_dataTaskWithURLRequestCompletionHandler),
+            ("test_dataTaskWithHttpInputStreamContentLength", test_dataTaskWithHttpInputStreamContentLength),
             // ("test_dataTaskWithHttpInputStream", test_dataTaskWithHttpInputStream), - Flaky test
             ("test_gzippedDataTask", test_gzippedDataTask),
             ("test_downloadTaskWithURL", test_downloadTaskWithURL),
