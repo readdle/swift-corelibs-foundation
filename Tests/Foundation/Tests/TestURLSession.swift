@@ -1540,6 +1540,63 @@ class TestURLSession: LoopbackServerTest {
         waitForExpectations(timeout: 60)
     }
 
+    func test_basicAuthRequestWithBodyStream() throws {
+        let dataString = "<?xml version=\"1.0\" encoding=\"utf-8\"?><soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:m=\"http://schemas.microsoft.com/exchange/services/2006/messages\" xmlns:t=\"http://schemas.microsoft.com/exchange/services/2006/types\"><soap:Body><m:SyncFolderHierarchy><m:FolderShape><t:BaseShape>IdOnly</t:BaseShape></m:FolderShape></m:SyncFolderHierarchy></soap:Body></soap:Envelope>"
+        let data = try XCTUnwrap(dataString.data(using: .utf8))
+        let expectedCallbacks = [
+            "urlSession(_:task:didSendBodyData:totalBytesSent:totalBytesExpectedToSend:)",
+            "urlSession(_:dataTask:didReceive:completionHandler:)",
+            "urlSession(_:task:didReceive:completionHandler:)",
+            "urlSession(_:task:needNewBodyStream:)",
+            "urlSession(_:task:didSendBodyData:totalBytesSent:totalBytesExpectedToSend:)",
+            "urlSession(_:dataTask:didReceive:completionHandler:)",
+            "urlSession(_:dataTask:didReceive:)",
+            "urlSession(_:task:didCompleteWithError:)"
+        ]
+
+        let urlString = "http://127.0.0.1:\(TestURLSession.serverPort)/auth/basic"
+        let url = URL(string: urlString)!
+        var urlRequest = URLRequest(url: url)
+        urlRequest.httpMethod = "POST"
+        urlRequest.httpBodyStream = InputStream(data: data)
+        let delegate = SessionDelegate(with: expectation(description: "POST \(urlString): Upload data"))
+        delegate.newBodyStreamHandler = { (completionHandler: @escaping (InputStream?) -> Void) in
+            completionHandler(InputStream(data: data))
+        }
+        delegate.challengeHandler = { (challenge: URLAuthenticationChallenge) -> (disposition: URLSession.AuthChallengeDisposition, credetial: URLCredential?) in
+            return (.useCredential, URLCredential(user: "user", password: "passwd", persistence: .none))
+        }
+        delegate.run(with: urlRequest, timeoutInterval: 4)
+        waitForExpectations(timeout: 5)
+        XCTAssertEqual(delegate.callbacks, expectedCallbacks)
+        XCTAssertEqual(delegate.authenticationChallenges.count, 1)
+     }
+
+    func test_httpRedirectionWithBodyStream() throws {
+        let dataString = "Quando l'accento divide il tempo in gruppi di due movimenti, il tempo si dice binario"
+        let data = try XCTUnwrap(dataString.data(using: .utf8))
+        let expectedCallbacks: [String] = [
+            "urlSession(_:task:didSendBodyData:totalBytesSent:totalBytesExpectedToSend:)",
+            "urlSession(_:task:willPerformHTTPRedirection:newRequest:completionHandler:)",
+            "urlSession(_:task:needNewBodyStream:)",
+            "urlSession(_:task:didCompleteWithError:)"
+        ]
+
+        let urlString = "http://127.0.0.1:\(TestURLSession.serverPort)/301?location=jsonBody"
+        let url = URL(string: urlString)!
+        var urlRequest = URLRequest(url: url)
+        urlRequest.httpMethod = "POST"
+        urlRequest.httpBodyStream = InputStream(data: data)
+        let delegate = SessionDelegate(with: expectation(description: "POST \(urlString): Redirection"))
+        delegate.newBodyStreamHandler = { (completionHandler: @escaping (InputStream?) -> Void) in
+            completionHandler(InputStream(data: data))
+        }
+        delegate.run(with: urlRequest, timeoutInterval: 4)
+        waitForExpectations(timeout: 5)
+        XCTAssertEqual(delegate.callbacks, expectedCallbacks)
+        XCTAssertEqual(delegate.redirectionResponse?.value(forHTTPHeaderField: "Location"), "jsonBody")
+    }
+
     /* Test for SR-8970 to verify that content-type header is not added to post with empty body */
     func test_postWithEmptyBody() {
         let config = URLSessionConfiguration.default
@@ -2090,6 +2147,7 @@ class TestURLSession: LoopbackServerTest {
             /* ⚠️ */ ("test_httpRedirectionChainInheritsTimeoutInterval", testExpectedToFail(test_httpRedirectionChainInheritsTimeoutInterval, "Flaky on Linux CI: https://bugs.swift.org/browse/SR-14433")),
             /* ⚠️ */ ("test_httpRedirectionExceededMaxRedirects", testExpectedToFail(test_httpRedirectionExceededMaxRedirects, "Flaky on Linux CI: https://bugs.swift.org/browse/SR-14433")),
             ("test_willPerformRedirect", test_willPerformRedirect),
+            ("test_httpRedirectionWithBodyStream", test_httpRedirectionWithBodyStream),
             ("test_httpNotFound", test_httpNotFound),
             /* ⚠️ */ ("test_http0_9SimpleResponses", testExpectedToFail(test_http0_9SimpleResponses, "Breaks on Ubunut20.04")),
             ("test_outOfRangeButCorrectlyFormattedHTTPCode", test_outOfRangeButCorrectlyFormattedHTTPCode),
@@ -2107,6 +2165,7 @@ class TestURLSession: LoopbackServerTest {
             ("test_setCookieHeadersCanBeIgnored", test_setCookieHeadersCanBeIgnored),
             ("test_initURLSessionConfiguration", test_initURLSessionConfiguration),
             ("test_basicAuthRequest", test_basicAuthRequest),
+            ("test_basicAuthRequestWithBodyStream", test_basicAuthRequestWithBodyStream),
             ("test_redirectionWithSetCookies", test_redirectionWithSetCookies),
             ("test_postWithEmptyBody", test_postWithEmptyBody),
             ("test_basicAuthWithUnauthorizedHeader", test_basicAuthWithUnauthorizedHeader),
