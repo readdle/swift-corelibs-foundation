@@ -602,6 +602,9 @@ extension _HTTPURLProtocol {
         // Otherwise, we'll start a new transfer with the passed in request.
         if let r = request {
             lastRedirectBody = nil
+            if case .stream(let stream) = task!.knownBody, stream.streamStatus != .notOpen {
+                task!.knownBody = nil
+            }
             startNewTransfer(with: r)
         } else {
             // If the redirect is not followed, return the redirect itself as the response
