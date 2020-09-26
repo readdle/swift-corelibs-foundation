@@ -1208,7 +1208,9 @@ extension _ProtocolClient : URLProtocolClient {
                 }
                 task._protocolStorage = .existing(_HTTPURLProtocol(task: task, cachedResponse: nil, client: nil))
             }
-            
+            if case .stream(let stream) = task.knownBody, stream.streamStatus != .notOpen {
+                task.knownBody = nil
+            }
             task.resume()
         }
         
