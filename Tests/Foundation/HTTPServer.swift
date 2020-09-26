@@ -742,6 +742,11 @@ public class TestURLSessionServer: CustomStringConvertible {
         }
 
         if uri == "/upload" {
+            if request.getHeader(for: "transfer-encoding") != nil && request.getHeader(for: "content-length") != nil {
+                // https://tools.ietf.org/html/rfc7230#section-3.3.2
+                // A sender MUST NOT send a Content-Length header field in any message that contains a Transfer-Encoding header field.
+                return try _HTTPResponse(response: .BAD_REQUEST, body: "Content-Length not allowed with Transfer-Encoding")
+            }
             if let contentLength = request.getHeader(for: "content-length") {
                 let text = "Upload completed!, Content-Length: \(contentLength)"
                 return try _HTTPResponse(response: .OK, body: text)

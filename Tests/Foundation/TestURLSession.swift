@@ -135,7 +135,31 @@ final class TestURLSession: LoopbackServerTest, @unchecked Sendable {
         XCTAssertEqual("London", result, "Did not receive expected value")
         XCTAssertEqual("London", delegate.capital)
     }
-
+    
+    func test_dataTaskWithHttpInputStreamContentLength() throws {
+        let urlString = "http://127.0.0.1:\(TestURLSession.serverPort)/upload"
+        let url = try XCTUnwrap(URL(string: urlString))
+        
+        let dataString = "<?xml version=\"1.0\" encoding=\"utf-8\"?><soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:m=\"http://schemas.microsoft.com/exchange/services/2006/messages\" xmlns:t=\"http://schemas.microsoft.com/exchange/services/2006/types\"><soap:Body><m:SyncFolderHierarchy><m:FolderShape><t:BaseShape>IdOnly</t:BaseShape></m:FolderShape></m:SyncFolderHierarchy></soap:Body></soap:Envelope>"
+        
+        let data = try XCTUnwrap(dataString.data(using: .utf8))
+        
+        var urlRequest = URLRequest(url: url)
+        urlRequest.httpMethod = "POST"
+        urlRequest.httpBodyStream = InputStream(data: data)
+        urlRequest.setValue("\(data.count)", forHTTPHeaderField: "Content-Length")
+        
+        let delegate = SessionDelegate(with: expectation(description: "POST \(urlString): with HTTP Body as InputStream"))
+        delegate.run(with: urlRequest, timeoutInterval: 3)
+        waitForExpectations(timeout: 4)
+        
+        let httpResponse = delegate.response as? HTTPURLResponse
+        
+        XCTAssertNil(delegate.error)
+        XCTAssertNotNil(delegate.response)
+        XCTAssertEqual(httpResponse?.statusCode, 200)
+    }
+    
     func test_dataTaskWithHttpInputStream() async throws {
         throw XCTSkip("This test is disabled (Flaky test)")
         #if false
