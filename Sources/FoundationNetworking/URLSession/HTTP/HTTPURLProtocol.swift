@@ -503,7 +503,7 @@ internal class _HTTPURLProtocol: _NativeProtocol {
         } else {
             // Follow the redirect. Need to configure new request with cookies, etc.
             let configuredRequest = session._configuration.configure(request: request)
-            task?.knownBody = URLSessionTask._Body.none
+            task?.knownBody = nil
             startNewTransfer(with: configuredRequest)
         }
     }
@@ -713,7 +713,7 @@ extension _HTTPURLProtocol {
         // Otherwise, we'll start a new transfer with the passed in request.
         if let r = request {
             lastRedirectBody = nil
-            task?.knownBody = URLSessionTask._Body.none
+            task!.knownBody = nil
             startNewTransfer(with: r)
         } else {
             // If the redirect is not followed, return the redirect itself as the response
