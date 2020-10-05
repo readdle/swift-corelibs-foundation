@@ -39,6 +39,7 @@ class TestOperationQueue : XCTestCase {
             ("test_CustomOperationReady", test_CustomOperationReady),
             ("test_DependencyCycleBreak", test_DependencyCycleBreak),
             ("test_Lifecycle", test_Lifecycle),
+            ("test_BlockOperationAddExecutionBlock", test_BlockOperationAddExecutionBlock),
         ]
     }
     
@@ -671,6 +672,21 @@ class TestOperationQueue : XCTestCase {
 
         Thread.sleep(forTimeInterval: 1) // Let queue to be deallocated
         XCTAssertNil(weakQueue, "Queue should be deallocated at this point")
+    }
+
+    func test_BlockOperationAddExecutionBlock() {
+        var msgOperations = [String]()
+        let blockOperation = BlockOperation {
+            msgOperations.append("block1 executed")
+        }
+        blockOperation.addExecutionBlock {
+            msgOperations.append("block2 executec")
+        }
+        XCTAssert(blockOperation.executionBlocks.count == 2)
+        let queue = OperationQueue()
+        queue.addOperation(blockOperation)
+        queue.waitUntilAllOperationsAreFinished()
+        XCTAssertEqual(msgOperations, ["block1 executed", "block2 executec"])
     }
 }
 
