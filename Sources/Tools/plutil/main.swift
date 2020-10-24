@@ -17,7 +17,7 @@ import Foundation
 import CRT
 #elseif canImport(MSVCRT)
 import Foundation
-import MSVCRT
+import CRT
 #endif
 
 func help() -> Int32 {
