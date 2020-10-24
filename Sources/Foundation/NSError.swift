@@ -14,6 +14,8 @@
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+#elseif canImport(CRT)
+import CRT
 #elseif canImport(MSVCRT)
 import MSVCRT
 #endif

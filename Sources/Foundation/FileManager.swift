@@ -17,7 +17,11 @@ fileprivate let UF_HIDDEN: Int32 = 1
 
 @_implementationOnly import CoreFoundation
 #if os(Windows)
+#if canImport(CRT)
+import CRT
+#else
 import MSVCRT
+#endif
 #endif
 
 #if os(Windows)

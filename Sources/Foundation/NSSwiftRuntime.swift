@@ -17,7 +17,11 @@
 #elseif os(Linux) || os(Android) || CYGWIN
 @_exported import Glibc
 #elseif os(Windows)
+#if canImport(CRT)
+@_exported import CRT
+#else
 @_exported import MSVCRT
+#endif
 #endif
 
 @_exported import Dispatch
