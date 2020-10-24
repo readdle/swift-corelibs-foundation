@@ -228,6 +228,7 @@ class TestFileManager : XCTestCase {
         } catch let e {
             XCTFail("\(e)")
         }
+        try? fm.removeItem(atPath: path)
     }
 
     func test_isWritableFile() {
@@ -248,6 +249,7 @@ class TestFileManager : XCTestCase {
         } catch let e {
             XCTFail("\(e)")
         }
+        try? fm.removeItem(atPath: path)
     }
 
     func test_isExecutableFile() {
@@ -273,6 +275,7 @@ class TestFileManager : XCTestCase {
         } catch let e {
             XCTFail("\(e)")
         }
+        try? fm.removeItem(atPath: path)
     }
 
     func test_isDeletableFile() {
@@ -293,6 +296,8 @@ class TestFileManager : XCTestCase {
             // test deletable if parent directory has all necessary permissions
             try fm.setAttributes([.posixPermissions : NSNumber(value: Int16(0o0755))], ofItemAtPath: dir_path)
             XCTAssertTrue(fm.isDeletableFile(atPath: file_path))
+
+            try? fm.removeItem(atPath: dir_path)
         }
         catch { XCTFail("\(error)") }
 
@@ -515,6 +520,7 @@ class TestFileManager : XCTestCase {
         } else {
             XCTFail()
         }
+        try? fm.removeItem(atPath: basePath)
     }
     
     func test_directoryEnumerator() {
@@ -859,6 +865,7 @@ class TestFileManager : XCTestCase {
         } catch {
             // ignore
         }
+        cleanup()
     }
 
     func test_linkItemAtPathToPath() {
