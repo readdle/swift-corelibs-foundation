@@ -1062,7 +1062,8 @@ extension URLSessionTask {
     static func authHandler(for authScheme: String) -> _AuthHandler? {
         let handlers: [String : _AuthHandler] = [
             NSURLAuthenticationMethodHTTPBasic : basicAuth,
-            NSURLAuthenticationMethodHTTPDigest: digestAuth
+            NSURLAuthenticationMethodHTTPDigest: digestAuth,
+            NSURLAuthenticationMethodNTLM      : ntlmAuth,
         ]
         return handlers[authScheme]
     }
@@ -1070,16 +1071,23 @@ extension URLSessionTask {
     //Authentication handlers
     static func basicAuth(_ task: URLSessionTask, _ disposition: URLSession.AuthChallengeDisposition, _ credential: URLCredential?) {
         //TODO: Handle disposition. For now, we default to .useCredential
-        let user = credential?.user ?? ""
-        let password = credential?.password ?? ""
-        let encodedString = "\(user):\(password)".data(using: .utf8)?.base64EncodedString()
         task.authRequest = task.originalRequest
-        task.authRequest?.setValue("Basic \(encodedString!)", forHTTPHeaderField: "Authorization")
+        task.authRequest?.authMethod = NSURLAuthenticationMethodHTTPBasic
+        task.authRequest?.credential = credential
     }
 
     static func digestAuth(_ task: URLSessionTask, _ disposition: URLSession.AuthChallengeDisposition, _ credential: URLCredential?) {
-        fatalError("The URLSession swift-corelibs-foundation implementation doesn't currently handle digest authentication.")
+        task.authRequest = task.originalRequest
+        task.authRequest?.authMethod = NSURLAuthenticationMethodHTTPDigest
+        task.authRequest?.credential = credential
     }
+    
+    static func ntlmAuth(_ task: URLSessionTask, _ disposition: URLSession.AuthChallengeDisposition, _ credential: URLCredential?) {
+        task.authRequest = task.originalRequest
+        task.authRequest?.authMethod = NSURLAuthenticationMethodNTLM
+        task.authRequest?.credential = credential
+    }
+
 }
 
 extension URLProtocol {

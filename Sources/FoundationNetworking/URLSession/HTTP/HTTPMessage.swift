@@ -112,6 +112,7 @@ extension _HTTPURLProtocol._HTTPMessage {
     struct _Challenge {
         static let AuthSchemeBasic = "basic"
         static let AuthSchemeDigest = "digest"
+        static let AuthSchemeNTLM = "ntlm"
         /// A single auth challenge parameter
         struct _AuthParameter {
             let name: String
@@ -214,7 +215,12 @@ extension _HTTPURLProtocol._HTTPMessage._Challenge {
                 break
             }
             let authScheme = String(authenticateView[authSchemeRange])
-            if authScheme.caseInsensitiveCompare(AuthSchemeBasic) == .orderedSame {
+            let supportedAuthScheme =
+                authScheme.caseInsensitiveCompare(AuthSchemeBasic) == .orderedSame ||
+                authScheme.caseInsensitiveCompare(AuthSchemeDigest) == .orderedSame ||
+                authScheme.caseInsensitiveCompare(AuthSchemeNTLM) == .orderedSame
+            
+            if supportedAuthScheme {
                 let authDataView = authenticateView[authSchemeRange.upperBound...]
                 let authParameters = _HTTPURLProtocol._HTTPMessage._Challenge._AuthParameter.parameters(from: authDataView)
                 let challenge = _HTTPURLProtocol._HTTPMessage._Challenge(authScheme: authScheme, authParameters: authParameters)
