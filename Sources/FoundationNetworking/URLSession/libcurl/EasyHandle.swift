@@ -289,6 +289,29 @@ extension _EasyHandle {
         CFURLSession_easy_getinfo_double(rawHandle, CFURLSessionInfoTOTAL_TIME, &timeSpent)
         return timeSpent / 1000
     }
+    
+    func set(authMethod: String) -> Bool {
+        var method = CFURLSessionAUTH_NONE
+        switch authMethod {
+        case NSURLAuthenticationMethodHTTPBasic:
+            method = CFURLSessionAUTH_BASIC
+        case NSURLAuthenticationMethodHTTPDigest:
+            method = CFURLSessionAUTH_DIGEST
+        case NSURLAuthenticationMethodNTLM:
+            method = CFURLSessionAUTH_NTLM
+        default:
+            return false
+        }
+        CFURLSession_easy_setopt_unsigned_long(rawHandle, CFURLSessionOptionHTTPAUTH, method)
+        return true
+    }
+    
+    func set(username: String, password: String) {
+        "\(username):\(password)".withCString {
+            CFURLSession_easy_setopt_ptr(rawHandle, CFURLSessionOptionUSERPWD, UnsafeMutablePointer(mutating: $0))
+        }
+    }
+
 }
 
 /// WebSocket support
