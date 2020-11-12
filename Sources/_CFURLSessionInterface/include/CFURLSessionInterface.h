@@ -604,6 +604,10 @@ typedef struct CFURLSessionCurlVersion {
 } CFURLSessionCurlVersion;
 CF_EXPORT CFURLSessionCurlVersion CFURLSessionCurlVersionInfo(void);
 
+CF_EXPORT unsigned long const CFURLSessionAUTH_NONE;
+CF_EXPORT unsigned long const CFURLSessionAUTH_BASIC;
+CF_EXPORT unsigned long const CFURLSessionAUTH_DIGEST;
+CF_EXPORT unsigned long const CFURLSessionAUTH_NTLM;
 
 CF_EXPORT int const CFURLSessionWriteFuncPause;
 CF_EXPORT int const CFURLSessionReadFuncPause;
@@ -635,6 +639,7 @@ CF_EXPORT CFURLSessionEasyCode CFURLSession_easy_setopt_fptr(CFURLSessionEasyHan
 CF_EXPORT CFURLSessionEasyCode CFURLSession_easy_setopt_ptr(CFURLSessionEasyHandle _Nonnull curl, CFURLSessionOption option, void *_Nullable a);
 CF_EXPORT CFURLSessionEasyCode CFURLSession_easy_setopt_int(CFURLSessionEasyHandle _Nonnull curl, CFURLSessionOption option, int a);
 CF_EXPORT CFURLSessionEasyCode CFURLSession_easy_setopt_long(CFURLSessionEasyHandle _Nonnull curl, CFURLSessionOption option, long a);
+CF_EXPORT CFURLSessionEasyCode CFURLSession_easy_setopt_unsigned_long(CFURLSessionEasyHandle _Nonnull curl, CFURLSessionOption option, unsigned long a);
 CF_EXPORT CFURLSessionEasyCode CFURLSession_easy_setopt_int64(CFURLSessionEasyHandle _Nonnull curl, CFURLSessionOption option, long long a);
 CF_EXPORT CFURLSessionEasyCode CFURLSession_easy_setopt_wc(CFURLSessionEasyHandle _Nonnull curl, CFURLSessionOption option, size_t(*_Nonnull a)(char *_Nonnull, size_t, size_t, void *_Nullable));
 CF_EXPORT CFURLSessionEasyCode CFURLSession_easy_setopt_fwc(CFURLSessionEasyHandle _Nonnull curl, CFURLSessionOption option, size_t(*_Nonnull a)(char *_Nonnull, size_t, size_t, void *_Nullable));

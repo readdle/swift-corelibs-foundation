@@ -90,6 +90,9 @@ CFURLSessionEasyCode CFURLSession_easy_setopt_int(CFURLSessionEasyHandle _Nonnul
 CFURLSessionEasyCode CFURLSession_easy_setopt_long(CFURLSessionEasyHandle _Nonnull curl, CFURLSessionOption option, long a) {
     return MakeEasyCode(curl_easy_setopt(curl, option.value, a));
 }
+CFURLSessionEasyCode CFURLSession_easy_setopt_unsigned_long(CFURLSessionEasyHandle _Nonnull curl, CFURLSessionOption option, unsigned long a) {
+    return MakeEasyCode(curl_easy_setopt(curl, option.value, a));
+}
 CFURLSessionEasyCode CFURLSession_easy_setopt_int64(CFURLSessionEasyHandle _Nonnull curl, CFURLSessionOption option, long long a) {
     return MakeEasyCode(curl_easy_setopt(curl, option.value, (int64_t)a));
 }
@@ -651,6 +654,10 @@ CFURLSessionCurlVersion CFURLSessionCurlVersionInfo(void) {
     return v;
 }
 
+unsigned long const CFURLSessionAUTH_NONE = CURLAUTH_NONE;
+unsigned long const CFURLSessionAUTH_BASIC = CURLAUTH_BASIC;
+unsigned long const CFURLSessionAUTH_DIGEST = CURLAUTH_DIGEST;
+unsigned long const CFURLSessionAUTH_NTLM = CURLAUTH_NTLM;
 
 int const CFURLSessionWriteFuncPause = CURL_WRITEFUNC_PAUSE;
 int const CFURLSessionReadFuncPause = CURL_READFUNC_PAUSE;

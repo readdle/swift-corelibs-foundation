@@ -442,6 +442,18 @@ internal class _HTTPURLProtocol: _NativeProtocol {
         easyHandle.set(requestMethod: request.httpMethod ?? "GET")
         // Always set the status as it may change if a HEAD is converted to a GET.
         easyHandle.set(noBody: request.httpMethod == "HEAD")
+        
+        if let authMethod = request.authMethod {
+            let authMethodWasSet = easyHandle.set(authMethod: authMethod)
+            if !authMethodWasSet {
+                NSLog("\(authMethod) is not supported")
+            }
+            if let credential = request.credential {
+                let username = credential.user ?? ""
+                let password = credential.password ?? ""
+                easyHandle.set(username: username, password: password)
+            }
+        }
     }
 
     /// What action to take

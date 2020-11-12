@@ -350,6 +350,8 @@ extension _HTTPURLProtocol._HTTPMessage._Challenge {
             return NSURLAuthenticationMethodHTTPBasic
         } else if authScheme.caseInsensitiveCompare(_HTTPURLProtocol._HTTPMessage._Challenge.AuthSchemeDigest) == .orderedSame {
             return NSURLAuthenticationMethodHTTPDigest
+        } else if authScheme.caseInsensitiveCompare(_HTTPURLProtocol._HTTPMessage._Challenge.AuthSchemeNTLM) == .orderedSame {
+            return NSURLAuthenticationMethodNTLM
         } else {
             return nil
         }
