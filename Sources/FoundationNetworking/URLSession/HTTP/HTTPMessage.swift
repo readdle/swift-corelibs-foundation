@@ -112,6 +112,7 @@ extension _HTTPURLProtocol._HTTPMessage {
     struct _Challenge {
         static let AuthSchemeBasic = "basic"
         static let AuthSchemeDigest = "digest"
+        static let AuthSchemeNTLM = "ntlm"
         /// A single auth challenge parameter
         struct _AuthParameter {
             let name: String
@@ -214,12 +215,27 @@ extension _HTTPURLProtocol._HTTPMessage._Challenge {
                 break
             }
             let authScheme = String(authenticateView[authSchemeRange])
-            if authScheme.caseInsensitiveCompare(AuthSchemeBasic) == .orderedSame {
+            let isBasic = authScheme.caseInsensitiveCompare(AuthSchemeBasic) == .orderedSame
+            let isDigest = authScheme.caseInsensitiveCompare(AuthSchemeDigest) == .orderedSame
+            let isNTLM = authScheme.caseInsensitiveCompare(AuthSchemeNTLM) == .orderedSame
+            
+            if isBasic || isDigest || isNTLM {
                 let authDataView = authenticateView[authSchemeRange.upperBound...]
                 let authParameters = _HTTPURLProtocol._HTTPMessage._Challenge._AuthParameter.parameters(from: authDataView)
                 let challenge = _HTTPURLProtocol._HTTPMessage._Challenge(authScheme: authScheme, authParameters: authParameters)
-                // "realm" is the only mandatory parameter for Basic auth scheme. Otherwise consider parsed data invalid.
-                if challenge.parameter(withName: "realm") != nil {
+
+                let isValidChallenge: Bool
+                
+                if isBasic || isDigest {
+                    // "realm" is the only mandatory parameter for Basic auth scheme. Otherwise consider parsed data invalid.
+                    isValidChallenge = challenge.parameter(withName: "realm") != nil
+                } else if isNTLM {
+                    isValidChallenge = true
+                } else {
+                    isValidChallenge = false
+                }
+
+                if isValidChallenge {
                     challenges.append(challenge)
                 }
             }
@@ -434,7 +450,7 @@ private extension String.UnicodeScalarView.SubSequence {
     var rangeOfTokenPrefix: Range<Index>? {
         guard !isEmpty else { return nil }
         var end = startIndex
-        while self[end].isValidMessageToken {
+        while end < endIndex && self[end].isValidMessageToken {
             end = self.index(after: end)
         }
         guard end != startIndex else { return nil }
