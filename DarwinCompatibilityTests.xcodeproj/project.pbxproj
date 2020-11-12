@@ -139,6 +139,7 @@
 		B9ED84FD23641F7000A58AF2 /* DarwinShims.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9F3269E1FC714DD003C3599 /* DarwinShims.swift */; };
 		B9F137A120B998D0000B7577 /* xdgTestHelper in CopyFiles */ = {isa = PBXBuildFile; fileRef = B917D31C20B0DB8B00728EE0 /* xdgTestHelper */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		B9F4492A2483FA1E00B30F02 /* TestNSURL.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9F449292483FA1E00B30F02 /* TestNSURL.swift */; };
+		C2BFC7B62568222600EDEA0B /* TestURLSessionRealServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2BFC7B52568222500EDEA0B /* TestURLSessionRealServer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -312,6 +313,7 @@
 		B9C89EDF1F6BF79000087AF4 /* TestFoundation */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TestFoundation; path = ../TestFoundation; sourceTree = "<group>"; };
 		B9F3269E1FC714DD003C3599 /* DarwinShims.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DarwinShims.swift; sourceTree = "<group>"; };
 		B9F449292483FA1E00B30F02 /* TestNSURL.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TestNSURL.swift; path = Tests/Foundation/Tests/TestNSURL.swift; sourceTree = "<group>"; };
+		C2BFC7B52568222500EDEA0B /* TestURLSessionRealServer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = TestURLSessionRealServer.swift; path = Tests/Foundation/Tests/TestURLSessionRealServer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -439,6 +441,7 @@
 				B94B07892401849800B244E8 /* TestURLResponse.swift */,
 				B94B07A52401849A00B244E8 /* TestURLSession.swift */,
 				B94B079F2401849A00B244E8 /* TestURLSessionFTP.swift */,
+				C2BFC7B52568222500EDEA0B /* TestURLSessionRealServer.swift */,
 				B94B07742401849600B244E8 /* TestUserDefaults.swift */,
 				B94B077A2401849700B244E8 /* TestUtils.swift */,
 				B94B077B2401849700B244E8 /* TestUUID.swift */,
@@ -697,6 +700,7 @@
 				B94B07E22401849B00B244E8 /* TestPropertyListEncoder.swift in Sources */,
 				B94B07E32401849B00B244E8 /* TestHTTPCookie.swift in Sources */,
 				B94B07E42401849B00B244E8 /* TestAffineTransform.swift in Sources */,
+				C2BFC7B62568222600EDEA0B /* TestURLSessionRealServer.swift in Sources */,
 				B94B07E52401849B00B244E8 /* TestNSNull.swift in Sources */,
 				B94B07E62401849B00B244E8 /* TestUnit.swift in Sources */,
 				B94B07E72401849B00B244E8 /* TestISO8601DateFormatter.swift in Sources */,
