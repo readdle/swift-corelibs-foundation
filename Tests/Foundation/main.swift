@@ -99,6 +99,7 @@ var allTestCases = [
     testCase(TestURLResponse.allTests),
     testCase(TestHTTPURLResponse.allTests),
     testCaseExpectedToFail(TestURLSession.allTests, "URLSession test interdependencies are causing intermittent CI issues."),
+    testCase(TestURLSessionRealServer.allTests),
     testCase(TestNSUUID.allTests),
     testCase(TestUUID.allTests),
     testCase(TestNSValue.allTests),
