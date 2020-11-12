@@ -98,6 +98,7 @@ var allTestCases = [
     testCase(TestURLRequest.allTests),
     testCase(TestURLResponse.allTests),
     testCase(TestHTTPURLResponse.allTests),
+    testCase(TestURLSessionRealServer.allTests),
     testCase(TestNSUUID.allTests),
     testCase(TestUUID.allTests),
     testCase(TestNSValue.allTests),
