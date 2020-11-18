@@ -433,14 +433,20 @@ internal class _HTTPURLProtocol: _NativeProtocol {
         easyHandle.set(noBody: request.httpMethod == "HEAD")
         
         if let authMethod = request.authMethod {
-            let authMethodWasSet = easyHandle.set(authMethod: authMethod)
-            if !authMethodWasSet {
-                NSLog("\(authMethod) is not supported")
-            }
-            if let credential = request.credential {
-                let username = credential.user ?? ""
-                let password = credential.password ?? ""
-                easyHandle.set(username: username, password: password)
+            if authMethod == NSURLAuthenticationMethodServerTrust {
+                if let trustAll = request.credential?._trustAllCertificated {
+                    easyHandle.set(trustAllCertificates: trustAll)
+                }
+            } else {
+                let authMethodWasSet = easyHandle.set(authMethod: authMethod)
+                if !authMethodWasSet {
+                    NSLog("\(authMethod) is not supported")
+                }
+                if let credential = request.credential {
+                    let username = credential.user ?? ""
+                    let password = credential.password ?? ""
+                    easyHandle.set(username: username, password: password)
+                }
             }
         }
     }

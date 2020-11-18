@@ -79,6 +79,7 @@ public var NSURLErrorServerCertificateHasUnknownRoot: Int { return -1204 }
 public var NSURLErrorServerCertificateNotYetValid: Int { return -1205 }
 public var NSURLErrorClientCertificateRejected: Int { return -1206 }
 public var NSURLErrorClientCertificateRequired: Int { return -1207 }
+public var NSURLErrorServerCertificateWrongHost: Int { return -1208 }
 public var NSURLErrorCannotLoadFromNetwork: Int { return -2000 }
 
 // Download and file I/O errors
