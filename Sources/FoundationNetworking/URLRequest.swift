@@ -71,6 +71,9 @@ public struct URLRequest : ReferenceConvertible, Equatable, Hashable {
     // to explicitly 60 then the precedence should be given to URLRequest.timeoutInterval.
     internal var isTimeoutIntervalSet = false
     
+    internal var authMethod: String?
+    internal var credential: URLCredential?
+    
     /// Returns the timeout interval of the receiver.
     /// - discussion: The timeout interval specifies the limit on the idle
     /// interval allotted to a request in the process of loading. The "idle
