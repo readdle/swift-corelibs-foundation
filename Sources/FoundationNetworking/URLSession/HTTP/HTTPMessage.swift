@@ -440,7 +440,7 @@ private extension String.UnicodeScalarView.SubSequence {
     var rangeOfTokenPrefix: Range<Index>? {
         guard !isEmpty else { return nil }
         var end = startIndex
-        while self[end].isValidMessageToken {
+        while end < endIndex && self[end].isValidMessageToken {
             end = self.index(after: end)
         }
         guard end != startIndex else { return nil }
