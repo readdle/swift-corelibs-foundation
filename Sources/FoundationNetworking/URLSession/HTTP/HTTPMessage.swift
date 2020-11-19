@@ -215,17 +215,25 @@ extension _HTTPURLProtocol._HTTPMessage._Challenge {
                 break
             }
             let authScheme = String(authenticateView[authSchemeRange])
-            let supportedAuthScheme =
-                authScheme.caseInsensitiveCompare(AuthSchemeBasic) == .orderedSame ||
-                authScheme.caseInsensitiveCompare(AuthSchemeDigest) == .orderedSame ||
-                authScheme.caseInsensitiveCompare(AuthSchemeNTLM) == .orderedSame
+            let isBasic = authScheme.caseInsensitiveCompare(AuthSchemeBasic) == .orderedSame
+            let isDigest = authScheme.caseInsensitiveCompare(AuthSchemeDigest) == .orderedSame
+            let isNTLM = authScheme.caseInsensitiveCompare(AuthSchemeNTLM) == .orderedSame
             
-            if supportedAuthScheme {
+            if isBasic || isDigest || isNTLM {
                 let authDataView = authenticateView[authSchemeRange.upperBound...]
                 let authParameters = _HTTPURLProtocol._HTTPMessage._Challenge._AuthParameter.parameters(from: authDataView)
                 let challenge = _HTTPURLProtocol._HTTPMessage._Challenge(authScheme: authScheme, authParameters: authParameters)
-                // "realm" is the only mandatory parameter for Basic auth scheme. Otherwise consider parsed data invalid.
-                if challenge.parameter(withName: "realm") != nil {
+
+                var isValidChallenge = false
+                
+                if isBasic || isDigest {
+                    // "realm" is the only mandatory parameter for Basic auth scheme. Otherwise consider parsed data invalid.
+                    isValidChallenge = challenge.parameter(withName: "realm") != nil
+                } else if isNTLM {
+                    isValidChallenge = true
+                }
+
+                if isValidChallenge {
                     challenges.append(challenge)
                 }
             }
