@@ -26,7 +26,9 @@ internal class _HTTPURLProtocol: _NativeProtocol {
     // mechanism. `lastRedirectBody` holds the body of the redirect currently being processed.
     var lastRedirectBody: Data? = nil
     private var redirectCount = 0
-
+    /// Authentication failure count
+    fileprivate var previousFailureCount = 0
+    
     public required init(task: URLSessionTask, cachedResponse: CachedURLResponse?, client: URLProtocolClient?) {
         super.init(task: task, cachedResponse: cachedResponse, client: client)
     }
@@ -454,7 +456,86 @@ internal class _HTTPURLProtocol: _NativeProtocol {
         if let request = redirectRequest(for: httpURLResponse, fromRequest: request) {
             return .redirectWithRequest(request)
         }
+        if isAuthenticationRequest(for: httpURLResponse) {
+            return .authenticate
+        }
         return .completeTask
+    }
+    
+    func isAuthenticationRequest(for response: HTTPURLResponse) -> Bool {
+        return response.statusCode == 401
+    }
+    
+    override func authenticateTask() {
+        guard case .transferCompleted(response: let response, bodyDataDrain: let bodyDataDrain) = self.internalState else {
+            fatalError("Trying to authenticate, but the transfer is not complete.")
+        }
+        guard let task = self.task else { fatalError() }
+        guard let session = task.session as? URLSession else { fatalError() }
+        guard let urlResponce = response as? HTTPURLResponse else {
+            fatalError("Response was not HTTPURLResponse")
+        }
+        guard let protectionSpace = URLProtectionSpace.create(with: urlResponce) else {
+            completeTask()
+            return
+        }
+        
+        self.internalState = .waitingForAuthentication(response: response, bodyDataDrain: bodyDataDrain)
+            
+        func proceed(proposing credential: URLCredential?) {
+            let proposedCredential: URLCredential?
+            let last = task.lastCredentialUsedFromStorageDuringAuthentication
+            
+            if last?.credential != nil && credential == nil {
+                proposedCredential = last?.credential
+            } else if last?.credential != credential {
+                proposedCredential = credential
+            } else {
+                proposedCredential = nil
+            }
+            
+            let authenticationChallenge = URLAuthenticationChallenge(protectionSpace: protectionSpace,
+                                                                     proposedCredential: proposedCredential,
+                                                                     previousFailureCount: previousFailureCount,
+                                                                     failureResponse: response,
+                                                                     error: nil,
+                                                                     sender: URLSessionAuthenticationChallengeSender())
+            previousFailureCount += 1
+            
+            task.authRequest = nil
+            self.client?.urlProtocol(self, didReceive: authenticationChallenge)
+        }
+        
+        if let storage = session.configuration.urlCredentialStorage {
+            storage.getCredentials(for: protectionSpace, task: task) { (credentials) in
+                if let credentials = credentials,
+                   let firstKeyLexicographically = credentials.keys.sorted().first {
+                    proceed(proposing: credentials[firstKeyLexicographically])
+                } else {
+                    storage.getDefaultCredential(for: protectionSpace, task: task) { (credential) in
+                        proceed(proposing: credential)
+                    }
+                }
+            }
+        } else {
+            proceed(proposing: nil)
+        }
+    }
+    
+    override func resumeAuthentication() {
+        guard case .waitingForAuthentication(response: let response, bodyDataDrain: let bodyDataDrain) = self.internalState else {
+            fatalError("Received callback for HTTP resume after authentication, but we're not waiting for it. Was it called multiple times?")
+        }
+        
+        // If the authRequest isn't created, we're supposed to treat this as do not authenticate.
+        // Otherwise, we'll start a new transfer with authentication.
+        if let authRequest = task?.authRequest {
+            startNewTransfer(with: authRequest)
+        } else {
+            // If the authentication is not configured, return the original response
+            self.internalState = .transferCompleted(response: response, bodyDataDrain: bodyDataDrain)
+            completeTask()
+        }
     }
 
     override func redirectFor(request: URLRequest) {

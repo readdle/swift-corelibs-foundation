@@ -114,6 +114,9 @@ open class URLSessionTask : NSObject, NSCopying {
     fileprivate let _protocolLock = NSLock() // protects:
     fileprivate var _protocolStorage: ProtocolState = .toBeCreated
     internal    var _lastCredentialUsedFromStorageDuringAuthentication: (protectionSpace: URLProtectionSpace, credential: URLCredential)?
+    var lastCredentialUsedFromStorageDuringAuthentication: (protectionSpace: URLProtectionSpace, credential: URLCredential)? {
+        return _protocolLock.performLocked { self._lastCredentialUsedFromStorageDuringAuthentication }
+    }
     
     private var _protocolClass: URLProtocol.Type {
         guard let request = currentRequest else { fatalError("A protocol class was requested, but we do not have a current request") }
@@ -289,9 +292,6 @@ open class URLSessionTask : NSObject, NSCopying {
     /// If there's an authentication failure, we'd need to create a new request with the credentials supplied by the user
     var authRequest: URLRequest? = nil
 
-    /// Authentication failure count
-    fileprivate var previousFailureCount = 0
-    
     /// May differ from originalRequest due to http server redirection
     /*@NSCopying*/ open internal(set) var currentRequest: URLRequest? {
         get {
@@ -783,47 +783,6 @@ extension _ProtocolClient : URLProtocolClient {
     func urlProtocolDidFinishLoading(_ urlProtocol: URLProtocol) {
         guard let task = urlProtocol.task else { fatalError() }
         guard let session = task.session as? URLSession else { fatalError() }
-        let urlResponse = task.response
-        if let response = urlResponse as? HTTPURLResponse, response.statusCode == 401 {
-            if let protectionSpace = URLProtectionSpace.create(with: response) {
-
-                func proceed(proposing credential: URLCredential?) {
-                    let proposedCredential: URLCredential?
-                    let last = task._protocolLock.performLocked { task._lastCredentialUsedFromStorageDuringAuthentication }
-                    
-                    if last?.credential != nil && credential == nil {
-                        proposedCredential = last?.credential
-                    } else if last?.credential != credential {
-                        proposedCredential = credential
-                    } else {
-                        proposedCredential = nil
-                    }
-                    
-                    let authenticationChallenge = URLAuthenticationChallenge(protectionSpace: protectionSpace, proposedCredential: proposedCredential,
-                                                                             previousFailureCount: task.previousFailureCount, failureResponse: response, error: nil,
-                                                                             sender: URLSessionAuthenticationChallengeSender())
-                    task.previousFailureCount += 1
-                    self.urlProtocol(urlProtocol, didReceive: authenticationChallenge)
-                }
-                
-                if let storage = session.configuration.urlCredentialStorage {
-                    storage.getCredentials(for: protectionSpace, task: task) { (credentials) in
-                        if let credentials = credentials,
-                            let firstKeyLexicographically = credentials.keys.sorted().first {
-                            proceed(proposing: credentials[firstKeyLexicographically])
-                        } else {
-                            storage.getDefaultCredential(for: protectionSpace, task: task) { (credential) in
-                                proceed(proposing: credential)
-                            }
-                        }
-                    }
-                } else {
-                    proceed(proposing: nil)
-                }
-                
-                return
-            }
-        }
         
         if let storage = session.configuration.urlCredentialStorage,
            let last = task._protocolLock.performLocked({ task._lastCredentialUsedFromStorageDuringAuthentication }) {
@@ -864,31 +823,25 @@ extension _ProtocolClient : URLProtocolClient {
         guard let session = task.session as? URLSession else { fatalError("Task not associated with URLSession.") }
         
         func proceed(using credential: URLCredential?) {
-            let protectionSpace = challenge.protectionSpace
-            let authScheme = protectionSpace.authenticationMethod
-
             task.suspend()
             
-            guard let handler = URLSessionTask.authHandler(for: authScheme) else {
-                fatalError("\(authScheme) is not supported")
-            }
-            handler(task, .useCredential, credential)
+            if let credential = credential {
+                let protectionSpace = challenge.protectionSpace
+                let authScheme = protectionSpace.authenticationMethod
+                
+                guard let handler = URLSessionTask.authHandler(for: authScheme) else {
+                    fatalError("\(authScheme) is not supported")
+                }
+                handler(task, .useCredential, credential)
 
-            task._protocolLock.performLocked {
-                if let credential = credential {
+                task._protocolLock.performLocked {
                     task._lastCredentialUsedFromStorageDuringAuthentication = (protectionSpace: protectionSpace, credential: credential)
-                } else {
-                    task._lastCredentialUsedFromStorageDuringAuthentication = nil
                 }
-                if let urlProtocol = `protocol` as? _HTTPURLProtocol {
-                    urlProtocol.prepareAuthenticationRequestReuse()
-                } else {
-                    task._protocolStorage = .existing(_HTTPURLProtocol(task: task, cachedResponse: nil, client: nil))
+                if case .stream(let stream) = task.knownBody, stream.streamStatus != .notOpen {
+                    task.knownBody = nil
                 }
             }
-            if case .stream(let stream) = task.knownBody, stream.streamStatus != .notOpen {
-                task.knownBody = nil
-            }
+            
             task.resume()
         }
         
@@ -904,11 +857,7 @@ extension _ProtocolClient : URLProtocolClient {
                 return proposedCredential
             }()
                 
-            if let credential = credential {
-                    proceed(using: credential)
-                } else {
-                urlProtocolDidComplete(`protocol`)
-            }
+            proceed(using: credential)
         }
         
         if let delegate = session.delegate as? URLSessionTaskDelegate {

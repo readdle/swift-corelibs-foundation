@@ -237,10 +237,20 @@ internal class _NativeProtocol: URLProtocol, _EasyHandleDelegate {
             failWith(error: error, request: request)
         case .redirectWithRequest(let newRequest):
             redirectFor(request: newRequest)
+        case .authenticate:
+            authenticateTask()
         }
     }
 
     func redirectFor(request: URLRequest) {
+        NSRequiresConcreteImplementation()
+    }
+    
+    func authenticateTask() {
+        NSRequiresConcreteImplementation()
+    }
+    
+    func resumeAuthentication() {
         NSRequiresConcreteImplementation()
     }
 
@@ -377,7 +387,6 @@ internal class _NativeProtocol: URLProtocol, _EasyHandleDelegate {
 
         task.getBody { (body) in
             self.internalState = .transferReady(self.createTransferState(url: url, body: body, workQueue: task.workQueue))
-            let request = task.authRequest ?? request
             self.configureEasyHandle(for: request, body: body)
             if (task.suspendCount) < 1 {
                 self.resume()
@@ -414,6 +423,10 @@ internal class _NativeProtocol: URLProtocol, _EasyHandleDelegate {
         if case .transferReady(let transferState) = self.internalState {
             self.internalState = .transferInProgress(transferState)
         }
+        
+        if case .waitingForAuthentication = self.internalState {
+            resumeAuthentication()
+        }
     }
     
     func canCache(_ response: CachedURLResponse) -> Bool {
@@ -444,6 +457,7 @@ extension _NativeProtocol {
     /// Action to be taken after a transfer completes
     enum _CompletionAction {
         case completeTask
+        case authenticate
         case failWithError(Int)
         case redirectWithRequest(URLRequest)
     }
@@ -554,6 +568,7 @@ extension _NativeProtocol {
         /// redirect, we need to wait for the delegate to let us know what
         /// action to take.
         case waitingForRedirectCompletionHandler(response: URLResponse, bodyDataDrain: _NativeProtocol._DataDrain)
+        case waitingForAuthentication(response: URLResponse, bodyDataDrain: _NativeProtocol._DataDrain)
         /// Waiting for the completion handler of the 'did receive response' callback.
         ///
         /// When we tell the delegate that we received a response (i.e. when
@@ -578,6 +593,7 @@ extension _NativeProtocol._InternalState {
         case .transferCompleted:                   return false
         case .transferFailed:                      return false
         case .waitingForRedirectCompletionHandler: return false
+        case .waitingForAuthentication:            return false
         case .waitingForResponseCompletionHandler: return true
         case .taskCompleted:                       return false
         }
@@ -592,6 +608,7 @@ extension _NativeProtocol._InternalState {
         case .transferCompleted:                   return false
         case .transferFailed:                      return false
         case .waitingForRedirectCompletionHandler: return false
+        case .waitingForAuthentication:            return false
         case .waitingForResponseCompletionHandler: return true
         case .taskCompleted:                       return false
         }
@@ -660,16 +677,6 @@ extension _NativeProtocol {
         /// Will result in a chunked upload
         case unknown
     }
-}
-
-extension _NativeProtocol {
-    
-    func prepareAuthenticationRequestReuse() {
-        if case .taskCompleted = internalState {
-            self.internalState = .initial
-        }
-    }
-
 }
 
 extension URLSession {
