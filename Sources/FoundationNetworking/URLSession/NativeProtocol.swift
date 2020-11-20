@@ -662,6 +662,16 @@ extension _NativeProtocol {
     }
 }
 
+extension _NativeProtocol {
+    
+    func prepareAuthenticationRequestReuse() {
+        if case .taskCompleted = internalState {
+            self.internalState = .initial
+        }
+    }
+
+}
+
 extension URLSession {
     static func printDebug(_ text: @autoclosure () -> String) {
         guard enableDebugOutput else { return }

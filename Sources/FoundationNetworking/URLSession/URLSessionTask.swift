@@ -880,7 +880,11 @@ extension _ProtocolClient : URLProtocolClient {
                 } else {
                     task._lastCredentialUsedFromStorageDuringAuthentication = nil
                 }
-                task._protocolStorage = .existing(_HTTPURLProtocol(task: task, cachedResponse: nil, client: nil))
+                if let urlProtocol = `protocol` as? _HTTPURLProtocol {
+                    urlProtocol.prepareAuthenticationRequestReuse()
+                } else {
+                    task._protocolStorage = .existing(_HTTPURLProtocol(task: task, cachedResponse: nil, client: nil))
+                }
             }
             if case .stream(let stream) = task.knownBody, stream.streamStatus != .notOpen {
                 task.knownBody = nil
