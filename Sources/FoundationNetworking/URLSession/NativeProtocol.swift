@@ -662,6 +662,22 @@ extension _NativeProtocol {
     }
 }
 
+extension _NativeProtocol {
+    
+    func prepareAuthenticationRequestReuse() {
+        // Without EasyHandle reuse we have bugs:
+        //  1. Digest: curl use 2 requests intead of 1 to authenticate
+        //  2. Digest + Post + urlRequest.setValue("chunked", forHTTPHeaderField: "Transfer-Encoding")
+        //     curl doesn't send all data and as a result connection disconnects with timeout
+        //     (TestURLSessionRealServer.test_dataTaskWithDigestAuth_InputStream)
+        // This allows to reuse _NativeProtocol and its EasyHandle
+        if case .taskCompleted = internalState {
+            self.internalState = .initial
+        }
+    }
+
+}
+
 extension URLSession {
     static func printDebug(_ text: @autoclosure () -> String) {
         guard enableDebugOutput else { return }
