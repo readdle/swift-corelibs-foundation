@@ -39,11 +39,11 @@ class TestURLSessionRealServer: XCTestCase {
     }
 
     override func setUp() {
-        #if os(Windows)
-        _putenv("URLSessionDebugLibcurl=TRUE")
-        #else
-        setenv("URLSessionDebugLibcurl", "TRUE", 1)
-        #endif
+//        #if os(Windows)
+//        _putenv("URLSessionDebugLibcurl=TRUE")
+//        #else
+//        setenv("URLSessionDebugLibcurl", "TRUE", 1)
+//        #endif
     }
 
     func test_dataTaskWithHttpBody() {
@@ -317,7 +317,6 @@ class TestURLSessionRealServer: XCTestCase {
 
     class HTTPBinResponseDelegateAuth<T: Codable>: HTTPBinResponseDelegateJSON<T> {
         override func urlSession(_ session: URLSession, task: URLSessionTask, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
-            print("didReceive challenge")
             resetOutput()
             lastAuthenticationMethod = challenge.protectionSpace.authenticationMethod
             completionHandler(.useCredential, httpBinCredentails)
@@ -349,7 +348,6 @@ class TestURLSessionRealServer: XCTestCase {
         }
 
         override func urlSession(_ session: URLSession, task: URLSessionTask, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
-            print("didReceive challenge")
             resetOutput()
             lastAuthenticationMethod = challenge.protectionSpace.authenticationMethod
             count += 1
@@ -361,7 +359,6 @@ class TestURLSessionRealServer: XCTestCase {
         var tryCount = 0
 
         override func urlSession(_ session: URLSession, task: URLSessionTask, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
-            print("didReceive challenge")
             resetOutput()
             lastAuthenticationMethod = challenge.protectionSpace.authenticationMethod
             
@@ -428,11 +425,7 @@ class TestURLSessionRealServer: XCTestCase {
 
         func urlSession(_ session: URLSession, didBecomeInvalidWithError error: Error?) {
             // We've got an error
-            if let err = error {
-                print("Error: \(err.localizedDescription)")
-            } else {
-                print("Error. Giving up")
-            }
+            XCTFail("Error: \(error?.localizedDescription ?? "Unknown")")
             //PlaygroundPage.current.finishExecution()
         }
     }
@@ -450,8 +443,6 @@ class TestURLSessionRealServer: XCTestCase {
         }
 
         override func parseResposne(data: Data) -> T? {
-            let str = String(data: data, encoding: .utf8) ?? " --- "
-            print("Response data: \(str)")
             return try? JSONDecoder().decode(T.self, from: data)
         }
     }
