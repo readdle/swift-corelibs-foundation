@@ -1071,8 +1071,7 @@ extension URLSessionTask {
     static func authHandler(for authScheme: String) -> _AuthHandler? {
         let handlers: [String : _AuthHandler] = [
             NSURLAuthenticationMethodHTTPBasic : basicAuth,
-            NSURLAuthenticationMethodHTTPDigest: digestAuth,
-            NSURLAuthenticationMethodNTLM      : ntlmAuth,
+            NSURLAuthenticationMethodHTTPDigest: digestAuth
         ]
         return handlers[authScheme]
     }

@@ -305,7 +305,7 @@ private extension _HTTPURLProtocol._HTTPMessage._Challenge._AuthParameter {
     private static func parameterValue(from valueView: inout String.UnicodeScalarView.SubSequence) -> String? {
         // Trim BWS
         valueView = valueView.trimSPHTPrefix ?? valueView
-        if valueView.first == _Delimiters.Dquote {
+        if valueView.first == _Delimiters.DoubleQuote {
             // quoted-string
             if let valueRange = valueView.rangeOfQuotedStringPrefix {
                 let value = valueView[valueRange].dequotedString()
@@ -506,7 +506,7 @@ private extension String.UnicodeScalarView.SubSequence {
         }
         var idx = startIndex
         // Expect and consume dquote
-        guard self[idx] == _Delimiters.Dquote else {
+        guard self[idx] == _Delimiters.DoubleQuote else {
             return nil
         }
         idx = self.index(after: idx)
@@ -520,7 +520,7 @@ private extension String.UnicodeScalarView.SubSequence {
                     return nil
                 }
                 isQuotedPair = false
-            } else if currentScalar == _Delimiters.Dquote {
+            } else if currentScalar == _Delimiters.DoubleQuote {
                 break
             } else {
                 guard currentScalar.isQdtext else {
@@ -530,7 +530,7 @@ private extension String.UnicodeScalarView.SubSequence {
             idx = self.index(after: idx)
         }
         // Expect stop on dquote
-        guard idx < endIndex, self[idx] == _Delimiters.Dquote else {
+        guard idx < endIndex, self[idx] == _Delimiters.DoubleQuote else {
             return nil
         }
         return startIndex..<self.index(after: idx)
@@ -546,7 +546,7 @@ private extension String.UnicodeScalarView.SubSequence {
         resultView.reserveCapacity(self.count)
         var idx = startIndex
         // Expect and consume dquote
-        guard self[idx] == _Delimiters.Dquote else {
+        guard self[idx] == _Delimiters.DoubleQuote else {
             return nil
         }
         idx = self.index(after: idx)
@@ -561,7 +561,7 @@ private extension String.UnicodeScalarView.SubSequence {
                 }
                 isQuotedPair = false
                 resultView.append(currentScalar)
-            } else if currentScalar == _Delimiters.Dquote {
+            } else if currentScalar == _Delimiters.DoubleQuote {
                 break
             } else {
                 guard currentScalar.isQdtext else {
@@ -572,7 +572,7 @@ private extension String.UnicodeScalarView.SubSequence {
             idx = self.index(after: idx)
         }
         // Expect stop on dquote
-        guard idx < endIndex, self[idx] == _Delimiters.Dquote else {
+        guard idx < endIndex, self[idx] == _Delimiters.DoubleQuote else {
             return nil
         }
         return String(resultView)
