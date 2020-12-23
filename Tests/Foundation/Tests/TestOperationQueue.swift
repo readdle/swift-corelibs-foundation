@@ -40,9 +40,9 @@ class TestOperationQueue : XCTestCase {
             ("test_CustomOperationReady", test_CustomOperationReady),
             ("test_DependencyCycleBreak", test_DependencyCycleBreak),
             ("test_Lifecycle", test_Lifecycle),
-            ("test_BlockOperationAddExecutionBlock", test_BlockOperationAddExecutionBlock),
             ("test_ConcurrentOperations", test_ConcurrentOperations),
             ("test_ConcurrentOperationsWithDependenciesAndCompletions", test_ConcurrentOperationsWithDependenciesAndCompletions),
+            ("test_BlockOperationAddExecutionBlock", test_BlockOperationAddExecutionBlock),
         ]
     }
     
@@ -703,26 +703,11 @@ class TestOperationQueue : XCTestCase {
         XCTAssertNil(weakQueue, "Queue should be deallocated at this point")
     }
 
-    func test_BlockOperationAddExecutionBlock() {
-        var msgOperations = [String]()
-        let blockOperation = BlockOperation {
-            msgOperations.append("block1 executed")
-        }
-        blockOperation.addExecutionBlock {
-            msgOperations.append("block2 executec")
-        }
-        XCTAssert(blockOperation.executionBlocks.count == 2)
-        let queue = OperationQueue()
-        queue.addOperation(blockOperation)
-        queue.waitUntilAllOperationsAreFinished()
-        XCTAssertEqual(msgOperations, ["block1 executed", "block2 executec"])
-    }
-
     func test_ConcurrentOperations() {
         let queue = OperationQueue()
         queue.maxConcurrentOperationCount = 2
         
-        // Running several iterations could reveal bugs in some edge cases
+        // Running several iterations helps to reveal use-after-dealloc crashes
         for _ in 0..<3 {
             let didRunOp1 = expectation(description: "Did run first operation")
             let didRunOp2 = expectation(description: "Did run second operation")
@@ -743,7 +728,7 @@ class TestOperationQueue : XCTestCase {
         let queue = OperationQueue()
         queue.maxConcurrentOperationCount = 2
         
-        // Running several iterations could reveal bugs in some edge cases
+        // Running several iterations helps to reveal use-after-dealloc crashes
         for _ in 0..<3 {
             let didRunOp1 = expectation(description: "Did run first operation")
             let didRunOp1Completion = expectation(description: "Did run first operation completion")
@@ -769,6 +754,21 @@ class TestOperationQueue : XCTestCase {
         }
     }
 
+    func test_BlockOperationAddExecutionBlock() {
+        let block1Expectation = expectation(description: "Block 1 executed")
+        let block2Expectation = expectation(description: "Block 2 executed")
+        
+        let blockOperation = BlockOperation {
+            block1Expectation.fulfill()
+        }
+        blockOperation.addExecutionBlock {
+            block2Expectation.fulfill()
+        }
+        XCTAssert(blockOperation.executionBlocks.count == 2)
+        let queue = OperationQueue()
+        queue.addOperation(blockOperation)
+        waitForExpectations(timeout: 1.0)
+    }
 }
 
 class AsyncOperation: Operation {
