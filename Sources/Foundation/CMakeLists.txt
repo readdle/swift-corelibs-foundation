@@ -37,6 +37,7 @@ add_library(Foundation
   ISO8601DateFormatter.swift
   JSONEncoder.swift
   JSONSerialization.swift
+  JSONSerialization+Parser.swift
   LengthFormatter.swift
   Locale.swift
   MassFormatter.swift
@@ -63,6 +64,7 @@ add_library(Foundation
   NSData+DataProtocol.swift
   NSData.swift
   NSDate.swift
+  NSDateComponents.swift
   NSDecimalNumber.swift
   NSDictionary.swift
   NSEnumerator.swift
@@ -100,6 +102,8 @@ add_library(Foundation
   NSTextCheckingResult.swift
   NSTimeZone.swift
   NSURL.swift
+  NSURLComponents.swift
+  NSURLQueryItem.swift
   NSURLError.swift
   NSUUID.swift
   NSValue.swift
@@ -130,6 +134,8 @@ add_library(Foundation
   Unit.swift
   URL.swift
   URLComponents.swift
+  URLQueryItem.swift
+  URLResourceKey.swift
   UserDefaults.swift
   UUID.swift)
 target_compile_definitions(Foundation PRIVATE
