@@ -311,6 +311,11 @@ extension _EasyHandle {
             CFURLSession_easy_setopt_ptr(rawHandle, CFURLSessionOptionUSERPWD, UnsafeMutablePointer(mutating: $0))
         }
     }
+
+    func set(trustAllCertificates: Bool) {
+        CFURLSession_easy_setopt_long(rawHandle, CFURLSessionOptionSSL_VERIFYPEER, trustAllCertificates ? 0 : 1)
+        CFURLSession_easy_setopt_long(rawHandle, CFURLSessionOptionSSL_VERIFYHOST, trustAllCertificates ? 0 : 1)
+    }
 }
 
 /// WebSocket support

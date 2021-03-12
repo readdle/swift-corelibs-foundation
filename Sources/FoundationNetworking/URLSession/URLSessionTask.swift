@@ -1287,6 +1287,19 @@ extension _ProtocolClient : URLProtocolClient {
 
     func urlProtocol(_ protocol: URLProtocol, didFailWithError error: Error) {
         guard let task = `protocol`.task else { fatalError() }
+        
+        if error._code == NSURLErrorServerCertificateUntrusted {
+            let protectionSpace = URLProtectionSpace(host: "", port: 443, protocol: "https", realm: "",
+                                                     authenticationMethod: NSURLAuthenticationMethodServerTrust)
+
+            let authenticationChallenge = URLAuthenticationChallenge(protectionSpace: protectionSpace, proposedCredential: nil,
+                                                                     previousFailureCount: task.previousFailureCount, failureResponse: nil, error: error,
+                                                                     sender: URLSessionAuthenticationChallengeSender())
+            task.previousFailureCount += 1
+            urlProtocol(`protocol`, didReceive: authenticationChallenge)
+            return
+        }
+
         urlProtocol(task: task, didFailWithError: error)
     }
 
@@ -1344,6 +1357,7 @@ extension URLSessionTask {
             NSURLAuthenticationMethodHTTPBasic : basicAuth,
             NSURLAuthenticationMethodHTTPDigest: digestAuth,
             NSURLAuthenticationMethodNTLM      : ntlmAuth,
+            NSURLAuthenticationMethodServerTrust: serverTrustAuth,
         ]
         return handlers[authScheme]
     }
@@ -1366,6 +1380,11 @@ extension URLSessionTask {
         task.authRequest = task.originalRequest
         task.authRequest?.authMethod = NSURLAuthenticationMethodNTLM
         task.authRequest?.credential = credential
+    }
+
+    static func serverTrustAuth(_ task: URLSessionTask, _ disposition: URLSession.AuthChallengeDisposition, _ credential: URLCredential?) {
+        task.authRequest = task.originalRequest
+        task.authRequest?.trustAllCertificates = credential?._trustAllCertificates
     }
 
 }
