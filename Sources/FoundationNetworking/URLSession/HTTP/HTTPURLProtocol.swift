@@ -457,6 +457,10 @@ internal class _HTTPURLProtocol: _NativeProtocol {
                 easyHandle.set(username: username, password: password)
             }
         }
+
+        if let trustAllCertificates = request.trustAllCertificates {
+            easyHandle.set(trustAllCertificates: trustAllCertificates)
+        }
     }
 
     /// What action to take

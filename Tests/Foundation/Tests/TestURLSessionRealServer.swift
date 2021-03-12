@@ -34,7 +34,7 @@ class TestURLSessionRealServer: XCTestCase {
             ("test_dataTaskWithDigestAuth_InputStream", test_dataTaskWithDigestAuth_InputStream),
             ("test_dataTaskWithDigestAuth_CredentialOnce", test_dataTaskWithDigestAuth_CredentialOnce),
             ("test_dataTaskWithDigestAuth_AuthChallenges", test_dataTaskWithDigestAuth_AuthChallenges),
-//            ("test_badCertificate", test_badCertificate)
+            ("test_badCertificate", test_badCertificate)
         ]
     }
 
@@ -71,14 +71,31 @@ class TestURLSessionRealServer: XCTestCase {
         XCTAssertTrue(delegate.response?.data == loremIpsum)
     }
 
-    /*
     func test_badCertificate() {
         let delegate = HTTPBinResponseDelegateAuthOwnCert<HTTPBinAuthResponse>()
 
-        let certificateFailures = ["self-signed", "expired", "wrong.host", "untrusted-root", "revoked", "pinning-test"]
+        let urls = [
+            "https://self-signed.badssl.com/",
+            "https://expired.badssl.com/",
+            "https://wrong.host.badssl.com/",
+            "https://untrusted-root.badssl.com/",
+            "https://revoked.badssl.com/",
+            "https://pinning-test.badssl.com/",
+            "https://owa.urma-weiss.at/",
+        ]
+        
+        var urlError = [String: Int]()
+        urlError["https://owa.urma-weiss.at/"] = NSURLErrorSecureConnectionFailed
+        #if os(Windows)
+        // This servers produce CURLE_SSL_CONNECT_ERROR (https://curl.se/libcurl/c/libcurl-errors.html)
+        // It could be certificate error, but maybe not
+        // So we convert it to NSURLErrorSecureConnectionFailed, so client could see it as SSL error
+        urlError["https://expired.badssl.com/"] = NSURLErrorSecureConnectionFailed
+        urlError["https://revoked.badssl.com/"] = NSURLErrorSecureConnectionFailed
+        #endif
 
-        for certFailure in certificateFailures {
-            let url = URL(string: "https://\(certFailure).badssl.com/")!
+        for urlString in urls {
+            let url = URL(string: urlString)!
             let urlSession = URLSession(configuration: URLSessionConfiguration.default, delegate: delegate, delegateQueue: nil)
 
             var urlRequest = URLRequest(url: url)
@@ -90,14 +107,18 @@ class TestURLSessionRealServer: XCTestCase {
             urlTask.resume()
 
             delegate.semaphore.wait()
-            XCTAssertTrue(urlTask.response != nil)
-            if (urlTask.response != nil) {
-                XCTAssertTrue(urlTask.response is HTTPURLResponse)
-                XCTAssertTrue((urlTask.response as! HTTPURLResponse).statusCode == 200)
+            
+            if let errorCode = urlError[urlString] {
+                XCTAssertEqual(urlTask.error?._code, errorCode)
+            } else {
+                XCTAssertTrue(urlTask.response != nil)
+                if (urlTask.response != nil) {
+                    XCTAssertTrue(urlTask.response is HTTPURLResponse)
+                    XCTAssertTrue((urlTask.response as! HTTPURLResponse).statusCode == 200)
+                }
             }
         }
     }
-    */
     
     func test_dataTaskWithHttpInputStream() {
         let delegate = HTTPBinResponseDelegateJSON<HTTPBinResponse>()
@@ -303,28 +324,21 @@ class TestURLSessionRealServer: XCTestCase {
         }
     }
     
-    /*
     class HTTPBinResponseDelegateAuthOwnCert<T: Codable>: HTTPBinResponseDelegateJSON<T> {
         override func urlSession(_ session: URLSession, task: URLSessionTask, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
-            #if DARWIN_COMPATIBILITY_TESTS
             if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust {
+                #if DARWIN_COMPATIBILITY_TESTS
                 let credential = URLCredential.init(trust: challenge.protectionSpace.serverTrust!)
+                #else
+                let credential = URLCredential.init(trust: true)
+                #endif
                 completionHandler(URLSession.AuthChallengeDisposition.useCredential, credential)
             }
             else {
                 completionHandler(.useCredential, httpBinCredentails)
             }
-            #else
-            if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust {
-                completionHandler(.useCredential, URLCredential.init(trust: true))
-            }
-            else {
-                completionHandler(.useCredential, httpBinCredentails)
-            }
-            #endif
         }
     }
-    */
 
     class HTTPBinResponseDelegateAuth_AuthChallenges_Counter: HTTPBinResponseDelegateJSON<HTTPBinAuthResponse> {
         let challenge: URLSession.AuthChallengeDisposition
