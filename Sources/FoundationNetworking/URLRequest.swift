@@ -73,6 +73,7 @@ public struct URLRequest : ReferenceConvertible, Equatable, Hashable, Sendable {
     
     internal var authMethod: String?
     internal var credential: URLCredential?
+    internal var trustAllCertificates: Bool?
     
     /// Returns the timeout interval of the receiver.
     /// - discussion: The timeout interval specifies the limit on the idle
