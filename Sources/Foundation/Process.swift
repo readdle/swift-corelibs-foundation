@@ -949,6 +949,8 @@ open class Process: NSObject {
 #else
         var spawnAttrs: posix_spawnattr_t = posix_spawnattr_t()
 #endif
+
+#if !os(Android)
         try _throwIfPosixError(posix_spawnattr_init(&spawnAttrs))
         try _throwIfPosixError(posix_spawnattr_setflags(&spawnAttrs, .init(POSIX_SPAWN_SETPGROUP)))
 #if canImport(Darwin)
@@ -963,6 +965,7 @@ open class Process: NSObject {
             }
             try _throwIfPosixError(_CFPosixSpawnFileActionsAddClose(fileActions, fd))
         }
+#endif
 #endif
 
         let fileManager = FileManager()
@@ -981,8 +984,9 @@ open class Process: NSObject {
         guard _CFPosixSpawn(&pid, launchPath, fileActions, &spawnAttrs, argv, envp) == 0 else {
             throw _NSErrorWithErrno(errno, reading: true, path: launchPath)
         }
+#if !os(Android)
         posix_spawnattr_destroy(&spawnAttrs)
-
+#endif
         // Close the write end of the input and output pipes.
         if let pipe = standardInput as? Pipe {
             pipe.fileHandleForReading.closeFile()
