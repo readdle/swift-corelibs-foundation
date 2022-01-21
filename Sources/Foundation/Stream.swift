@@ -109,7 +109,7 @@ open class InputStream: Stream {
     }
     
     internal let _streamStorage: AnyObject!
-    internal var _stream: CFReadStream { unsafeBitCast(_streamStorage, to: CFReadStream.self) }
+    final internal var _stream: CFReadStream { unsafeBitCast(_streamStorage, to: CFReadStream.self) }
 
     // reads up to length bytes into the supplied buffer, which must be at least of size len. Returns the actual number of bytes read.
     open func read(_ buffer: UnsafeMutablePointer<UInt8>, maxLength len: Int) -> Int {
@@ -129,10 +129,6 @@ open class InputStream: Stream {
     // returns YES if the stream has bytes available or if it impossible to tell without actually doing the read.
     open var hasBytesAvailable: Bool {
         return CFReadStreamHasBytesAvailable(_stream)
-    }
-    
-    fileprivate init(readStream: CFReadStream) {
-        _streamStorage = readStream
     }
     
     public init(data: Data) {
