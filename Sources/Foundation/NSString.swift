@@ -1666,15 +1666,15 @@ extension NSString : CVarArg {
 }
 
 #if !_runtime(_ObjC)
-extension String : CVarArg, _CVarArgObject {
-    @inlinable // c-abi
-    public var _cVarArgObject: CVarArg {
-        return NSString(string: self)
-    }
+// extension String : CVarArg, _CVarArgObject {
+//     @inlinable // c-abi
+//     public var _cVarArgObject: CVarArg {
+//         return NSString(string: self)
+//     }
 
-    @inlinable // c-abi
-    public var _cVarArgEncoding: [Int] {
-        fatalError("_cVarArgEncoding must be called on NSString instead")
-    }
-}
+//     @inlinable // c-abi
+//     public var _cVarArgEncoding: [Int] {
+//         fatalError("_cVarArgEncoding must be called on NSString instead")
+//     }
+// }
 #endif
