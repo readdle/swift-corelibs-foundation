@@ -104,9 +104,9 @@ final class TestAttributedStringCOW: XCTestCase {
         assertCOWBehavior { (str) in
             str.testInt = 3
         }
-        assertCOWBehavior { (str) in
-            str.test.testInt = 3
-        }
+        // assertCOWBehavior { (str) in
+        //     str.test.testInt = 3
+        // }
     }
     
     func testSubstring() {
@@ -125,9 +125,9 @@ final class TestAttributedStringCOW: XCTestCase {
         assertCOWBehavior { (str) in
             str[makeSubrange(str)].testInt = 3
         }
-        assertCOWBehavior { (str) in
-            str[makeSubrange(str)].test.testInt = 3
-        }
+        // assertCOWBehavior { (str) in
+        //     str[makeSubrange(str)].test.testInt = 3
+        // }
     }
     
     func testCharacters() {

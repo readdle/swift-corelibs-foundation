@@ -274,12 +274,12 @@ extension AttributeScopes.FoundationAttributes {
         public static let markdownName = "inflectionAlternative"
         
         public static func objectiveCValue(for value: AttributedString) throws -> NSObject {
-            try NSAttributedString(value, including: \.foundation)
+            try NSAttributedString(value, including: AttributeScopes.FoundationAttributes.self)
         }
         
         public static func value(for object: NSObject) throws -> AttributedString {
             if let attrString = object as? NSAttributedString {
-                return try AttributedString(attrString, including: \.foundation)
+                return try AttributedString(attrString, including: AttributeScopes.FoundationAttributes.self)
             } else {
                 throw CocoaError(.coderInvalidValue)
             }
@@ -313,6 +313,49 @@ extension AttributeScopes.FoundationAttributes {
             case spelledOutValue
             case unit(Unit)
             case actualByteCount
+
+            private enum Key: CodingKey {
+                case rawValue
+                case associatedValue
+            }
+
+            enum CodingError: Error {
+                case unknownValue
+            }
+
+            public init(from decoder: Decoder) throws {
+                let container = try decoder.container(keyedBy: Key.self)
+                let rawValue = try container.decode(Int.self, forKey: .rawValue)
+                switch rawValue {
+                case 0:
+                    self = .value
+                case 1:
+                    self = .spelledOutValue
+                case 2:
+                    let unit = try container.decode(Unit.self, forKey: .associatedValue)
+                    self = .unit(unit)
+                case 3:
+                    self = .actualByteCount
+                default:
+                    throw CodingError.unknownValue
+                }
+            }
+
+            public func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: Key.self)
+                switch self {
+                case .value:
+                    try container.encode(0, forKey: .rawValue)
+                case .spelledOutValue:
+                    try container.encode(1, forKey: .rawValue)
+                case .unit(let unit):
+                    try container.encode(2, forKey: .rawValue)
+                    try container.encode(unit, forKey: .associatedValue)
+                case .actualByteCount:
+                    try container.encode(3, forKey: .rawValue)
+                }
+            }
+
         }
         
         public enum Unit: Codable {
@@ -325,6 +368,62 @@ extension AttributeScopes.FoundationAttributes {
             case eb
             case zb
             case yb
+
+            enum CodingError: Error {
+                case unknownValue
+            }
+
+            public init(from decoder: Decoder) throws {
+                let container = try decoder.singleValueContainer()
+                let rawValue = try container.decode(Int.self)
+                switch rawValue {
+                case 0:
+                    self = .byte
+                case 1:
+                    self = .kb
+                case 2:
+                    self = .mb
+                case 3:
+                    self = .gb
+                case 4:
+                    self = .tb
+                case 5:
+                    self = .pb
+                case 6:
+                    self = .eb
+                case 7:
+                    self = .zb
+                case 8:
+                    self = .yb
+                default:
+                    throw CodingError.unknownValue
+                }
+            }
+
+            public func encode(to encoder: Encoder) throws {
+                var container = encoder.singleValueContainer()
+                switch self {
+                case .byte:
+                    try container.encode(0)
+                case .kb:
+                    try container.encode(1)
+                case .mb:
+                    try container.encode(2)
+                case .gb:
+                    try container.encode(3)
+                case .tb:
+                    try container.encode(4)
+                case .pb:
+                    try container.encode(5)
+                case .eb:
+                    try container.encode(6)
+                case .zb:
+                    try container.encode(7)
+                case .yb:
+                    try container.encode(8)
+                }
+            }
+
         }
     }
 }
