@@ -13,7 +13,7 @@ import SwiftFoundation
 import CFXMLInterface
 #else
 import Foundation
-@_implementationOnly import CFXMLInterface
+import CFXMLInterface
 #endif
 @_implementationOnly import CoreFoundation
 
