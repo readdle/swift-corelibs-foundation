@@ -499,7 +499,7 @@ open class Process: NSObject {
 
         var siStartupInfo: STARTUPINFOW = STARTUPINFOW()
         siStartupInfo.cb = DWORD(MemoryLayout<STARTUPINFOW>.size)
-        siStartupInfo.dwFlags = DWORD(STARTF_USESTDHANDLES)
+        siStartupInfo.dwFlags = DWORD(WinSDK.STARTF_USESTDHANDLES)
 
         var _devNull: FileHandle?
         func devNullFd() throws -> HANDLE {
@@ -508,21 +508,21 @@ open class Process: NSObject {
         }
 
         var modifiedPipes: [(handle: HANDLE, prevValue: DWORD)] = []
-        defer { modifiedPipes.forEach { SetHandleInformation($0.handle, DWORD(HANDLE_FLAG_INHERIT), $0.prevValue) } }
+        defer { modifiedPipes.forEach { SetHandleInformation($0.handle, DWORD(WinSDK.HANDLE_FLAG_INHERIT), $0.prevValue) } }
 
         func deferReset(handle: HANDLE) throws {
             var handleInfo: DWORD = 0
             guard GetHandleInformation(handle, &handleInfo) else {
                 throw _NSErrorWithWindowsError(GetLastError(), reading: false)
             }
-            modifiedPipes.append((handle: handle, prevValue: handleInfo & DWORD(HANDLE_FLAG_INHERIT)))
+            modifiedPipes.append((handle: handle, prevValue: handleInfo & DWORD(WinSDK.HANDLE_FLAG_INHERIT)))
         }
 
         switch standardInput {
         case let pipe as Pipe:
             siStartupInfo.hStdInput = pipe.fileHandleForReading._handle
             try deferReset(handle: pipe.fileHandleForWriting._handle)
-            SetHandleInformation(pipe.fileHandleForWriting._handle, DWORD(HANDLE_FLAG_INHERIT), 0)
+            SetHandleInformation(pipe.fileHandleForWriting._handle, DWORD(WinSDK.HANDLE_FLAG_INHERIT), 0)
 
         // nil or NullDevice maps to NUL
         case let handle as FileHandle where handle === FileHandle._nulldeviceFileHandle: fallthrough
@@ -532,7 +532,7 @@ open class Process: NSObject {
         case let handle as FileHandle:
             siStartupInfo.hStdInput = handle._handle
             try deferReset(handle: handle._handle)
-            SetHandleInformation(handle._handle, DWORD(HANDLE_FLAG_INHERIT), 1)
+            SetHandleInformation(handle._handle, DWORD(WinSDK.HANDLE_FLAG_INHERIT), 1)
         default: break
         }
 
@@ -540,7 +540,7 @@ open class Process: NSObject {
         case let pipe as Pipe:
             siStartupInfo.hStdOutput = pipe.fileHandleForWriting._handle
             try deferReset(handle: pipe.fileHandleForReading._handle)
-            SetHandleInformation(pipe.fileHandleForReading._handle, DWORD(HANDLE_FLAG_INHERIT), 0)
+            SetHandleInformation(pipe.fileHandleForReading._handle, DWORD(WinSDK.HANDLE_FLAG_INHERIT), 0)
 
         // nil or NullDevice maps to NUL
         case let handle as FileHandle where handle === FileHandle._nulldeviceFileHandle: fallthrough
@@ -550,7 +550,7 @@ open class Process: NSObject {
         case let handle as FileHandle:
             siStartupInfo.hStdOutput = handle._handle
             try deferReset(handle: handle._handle)
-            SetHandleInformation(handle._handle, DWORD(HANDLE_FLAG_INHERIT), 1)
+            SetHandleInformation(handle._handle, DWORD(WinSDK.HANDLE_FLAG_INHERIT), 1)
         default: break
         }
 
@@ -558,7 +558,7 @@ open class Process: NSObject {
         case let pipe as Pipe:
             siStartupInfo.hStdError = pipe.fileHandleForWriting._handle
             try deferReset(handle: pipe.fileHandleForReading._handle)
-            SetHandleInformation(pipe.fileHandleForReading._handle, DWORD(HANDLE_FLAG_INHERIT), 0)
+            SetHandleInformation(pipe.fileHandleForReading._handle, DWORD(WinSDK.HANDLE_FLAG_INHERIT), 0)
 
         // nil or NullDevice maps to NUL
         case let handle as FileHandle where handle === FileHandle._nulldeviceFileHandle: fallthrough
@@ -568,7 +568,7 @@ open class Process: NSObject {
         case let handle as FileHandle:
             siStartupInfo.hStdError = handle._handle
             try deferReset(handle: handle._handle)
-            SetHandleInformation(handle._handle, DWORD(HANDLE_FLAG_INHERIT), 1)
+            SetHandleInformation(handle._handle, DWORD(WinSDK.HANDLE_FLAG_INHERIT), 1)
         default: break
         }
 

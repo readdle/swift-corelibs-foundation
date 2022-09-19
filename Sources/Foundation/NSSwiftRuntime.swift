@@ -19,7 +19,7 @@
 #elseif os(WASI)
 @_exported import WASILibc
 #elseif os(Windows)
-@_exported import CRT
+@_exported import MSVCRT
 #endif
 
 #if !os(WASI)
