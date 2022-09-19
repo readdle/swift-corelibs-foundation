@@ -208,10 +208,10 @@ extension String {
                      length: nullPosition,
                      encoding: Encoding.utf8.rawValue)
         }
-        guard let ns = ns else {
+        guard let nsValue = ns else {
             return nil
         }
-        self = String._unconditionallyBridgeFromObjectiveC(ns)
+        self = String._unconditionallyBridgeFromObjectiveC(nsValue)
     }
 
     @_alwaysEmitIntoClient
@@ -458,10 +458,10 @@ extension String {
                      length: nullPosition,
                      encoding: enc.rawValue)
         }
-        guard let ns = ns else {
+        guard let nsValue = ns else {
             return nil
         }
-        self = String._unconditionallyBridgeFromObjectiveC(ns)
+        self = String._unconditionallyBridgeFromObjectiveC(nsValue)
     }
 
     @_alwaysEmitIntoClient
