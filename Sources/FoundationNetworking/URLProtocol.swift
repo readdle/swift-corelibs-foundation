@@ -392,7 +392,10 @@ open class URLProtocol : NSObject {
         let protocolClasses = protocols
         for protocolClass in protocolClasses {
             let urlProtocolClass: AnyClass = protocolClass
-            guard let urlProtocol = urlProtocolClass as? URLProtocol.Type else { fatalError() }
+            guard let urlProtocol = urlProtocolClass as? URLProtocol.Type else {
+                NSLog("getProtocolClass - wrong urlProtocol type")
+                return nil
+            }
             if urlProtocol.canInit(with: request) {
                 _classesLock.unlock()
                 return urlProtocol

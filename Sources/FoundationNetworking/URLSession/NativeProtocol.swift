@@ -99,7 +99,8 @@ internal class _NativeProtocol: URLProtocol, _EasyHandleDelegate {
 
     func didReceive(data: Data) -> _EasyHandle._Action {
         guard case .transferInProgress(var ts) = internalState else {
-            fatalError("Received body data, but no transfer in progress.")
+            NSLog("Received body data, but no transfer in progress.")
+            return .abort
         }
 
         if let response = validateHeaderComplete(transferState:ts) {
@@ -126,7 +127,8 @@ internal class _NativeProtocol: URLProtocol, _EasyHandleDelegate {
 
     func validateHeaderComplete(transferState: _TransferState) -> URLResponse? {
         guard transferState.isHeaderComplete else {
-            fatalError("Received body data, but the header is not complete, yet.")
+            NSLog("Received body data, but the header is not complete, yet.")
+            return nil
         }
         return nil
     }
@@ -178,10 +180,12 @@ internal class _NativeProtocol: URLProtocol, _EasyHandleDelegate {
 
     func fill(writeBuffer buffer: UnsafeMutableBufferPointer<Int8>) -> _EasyHandle._WriteBufferResult {
         guard case .transferInProgress(let ts) = internalState else {
-            fatalError("Requested to fill write buffer, but transfer isn't in progress.")
+            NSLog("fill - Requested to fill write buffer, but transfer isn't in progress.")
+            return .abort
         }
         guard let source = ts.requestBodySource else {
-            fatalError("Requested to fill write buffer, but transfer state has no body source.")
+            NSLog("fill - Requested to fill write buffer, but transfer state has no body source.")
+            return .abort
         }
         switch source.getNextChunk(withLength: buffer.count) {
         case .data(let data):
@@ -213,10 +217,12 @@ internal class _NativeProtocol: URLProtocol, _EasyHandleDelegate {
             return
         }
         guard case .transferInProgress(let ts) = internalState else {
-            fatalError("Transfer completed, but it wasn't in progress.")
+            NSLog("transferCompleted - Transfer completed, but it wasn't in progress.")
+            return
         }
         guard let request = task?.currentRequest else {
-            fatalError("Transfer completed, but there's no current request.")
+            NSLog("transferCompleted - Transfer completed, but there's no current request.")
+            return
         }
 
         if let response = task?.response {
@@ -250,7 +256,8 @@ internal class _NativeProtocol: URLProtocol, _EasyHandleDelegate {
 
     func completeTask() {
         guard case .transferCompleted(response: let response, bodyDataDrain: let bodyDataDrain) = self.internalState else {
-            fatalError("Trying to complete the task, but its transfer isn't complete.")
+            NSLog("completeTask - Trying to complete the task, but its transfer isn't complete.")
+            return
         }
         task?.response = response
         // We don't want a timeout to be triggered after this. The timeout timer needs to be cancelled.
@@ -457,7 +464,8 @@ extension _NativeProtocol {
     func completeTask(withError error: Error) {
         task?.error = error
         guard case .transferFailed = self.internalState else {
-            fatalError("Trying to complete the task, but its transfer isn't complete / failed.")
+            NSLog("completeTask - Trying to complete the task, but its transfer isn't complete / failed.")
+            return
         }
         //We don't want a timeout to be triggered after this. The timeout timer needs to be cancelled.
         easyHandle.timeoutTimer = nil
@@ -488,7 +496,8 @@ extension _NativeProtocol {
         // This will pause the easy handle. We need to wait for the
         // delegate before processing any more data.
         guard case .transferInProgress(let ts) = self.internalState else {
-            fatalError("Transfer not in progress.")
+            NSLog("Transfer not in progress.")
+            return
         }
         self.internalState = .waitingForResponseCompletionHandler(ts)
 
@@ -512,7 +521,8 @@ extension _NativeProtocol {
     /// how we should proceed after receiving a response (i.e. complete header).
     func didCompleteResponseCallback(disposition: URLSession.ResponseDisposition) {
         guard case .waitingForResponseCompletionHandler(let ts) = self.internalState else {
-            fatalError("Received response disposition, but we're not waiting for it.")
+            NSLog("didCompleteResponseCallback - Received response disposition, but we're not waiting for it.")
+            return
         }
         switch disposition {
         case .cancel:

@@ -42,10 +42,12 @@ internal class _HTTPURLProtocol: _NativeProtocol {
 
     override func didReceive(headerData data: Data, contentLength: Int64) -> _EasyHandle._Action {
         guard case .transferInProgress(let ts) = internalState else {
-            fatalError("Received header data, but no transfer in progress.")
+            NSLog("didReceive - Received header data, but no transfer in progress.")
+            return .abort
         }
         guard let task = task else {
-            fatalError("Received header data but no task available.")
+            NSLog("didReceive - Received header data but no task available.")
+            return .abort
         }
         do {
             let newTS = try ts.byAppendingHTTP(headerLine: data)
@@ -407,7 +409,8 @@ internal class _HTTPURLProtocol: _NativeProtocol {
         }
         let timeoutHandler = DispatchWorkItem { [weak self] in
             guard let self = self, let task = self.task else {
-                fatalError("Timeout on a task that doesn't exist")
+                NSLog("configureEasyHandle - Timeout on a task that doesn't exist")
+                return
             } //this guard must always pass
 
             // If a timeout occurred while waiting for a redirect completion handler to be called by
@@ -425,13 +428,16 @@ internal class _HTTPURLProtocol: _NativeProtocol {
             }
         }
 
-        guard let task = self.task else { fatalError() }
+        guard let task = self.task else {
+            NSLog("configureEasyHandle - no task")
+            return
+        }
         easyHandle.timeoutTimer = _TimeoutSource(queue: task.workQueue, milliseconds: timeoutInterval, handler: timeoutHandler)
         easyHandle.set(automaticBodyDecompression: true)
         easyHandle.set(requestMethod: request.httpMethod ?? "GET")
         // Always set the status as it may change if a HEAD is converted to a GET.
         easyHandle.set(noBody: request.httpMethod == "HEAD")
-        
+
         if let authMethod = request.authMethod {
             let authMethodWasSet = easyHandle.set(authMethod: authMethod)
             if !authMethodWasSet {
@@ -453,7 +459,8 @@ internal class _HTTPURLProtocol: _NativeProtocol {
     override func completionAction(forCompletedRequest request: URLRequest, response: URLResponse) -> _CompletionAction {
         // Redirect:
         guard let httpURLResponse = response as? HTTPURLResponse else {
-            fatalError("Response was not HTTPURLResponse")
+            NSLog("completionAction - Response was not HTTPURLResponse")
+            return .completeTask
         }
         if let request = redirectRequest(for: httpURLResponse, fromRequest: request) {
             return .redirectWithRequest(request)
@@ -463,7 +470,8 @@ internal class _HTTPURLProtocol: _NativeProtocol {
 
     override func redirectFor(request: URLRequest) {
         guard case .transferCompleted(response: let response, bodyDataDrain: let bodyDataDrain) = self.internalState else {
-            fatalError("Trying to redirect, but the transfer is not complete.")
+            NSLog("redirectFor - Trying to redirect, but the transfer is not complete.")
+            return
         }
 
         // Avoid a never ending redirect chain by having a hard limit on the number of redirects.
@@ -474,13 +482,17 @@ internal class _HTTPURLProtocol: _NativeProtocol {
             let error = NSError(domain: NSURLErrorDomain, code: NSURLErrorHTTPTooManyRedirects,
                                 userInfo: [NSLocalizedDescriptionKey: "too many HTTP redirects"])
             guard let request = task?.currentRequest else {
-                fatalError("In a redirect chain but no current task/request")
+                NSLog("redirectFor - In a redirect chain but no current task/request")
+                return
             }
             failWith(error: error, request: request)
             return
         }
 
-        guard let session = task?.session as? URLSession else { fatalError() }
+        guard let session = task?.session as? URLSession else {
+            NSLog("redirectFor - no sesson")
+            return
+        }
 
         if let delegate = session.delegate as? URLSessionTaskDelegate {
             // At this point we need to change the internal state to note
@@ -611,7 +623,8 @@ fileprivate var userAgentString: String = {
 extension _HTTPURLProtocol {
     fileprivate func didCompleteRedirectCallback(_ request: URLRequest?) {
         guard case .waitingForRedirectCompletionHandler(response: let response, bodyDataDrain: let bodyDataDrain) = self.internalState else {
-            fatalError("Received callback for HTTP redirection, but we're not waiting for it. Was it called multiple times?")
+            NSLog("didCompleteRedirectCallback - Received callback for HTTP redirection, but we're not waiting for it. Was it called multiple times?")
+            return
         }
         // If the request is `nil`, we're supposed to treat the current response
         // as the final response, i.e. not do any redirection.
@@ -638,9 +651,18 @@ internal extension _HTTPURLProtocol {
     /// this method gets called.
     func didReceiveResponse() {
         guard let _ = task as? URLSessionDataTask else { return }
-        guard case .transferInProgress(let ts) = self.internalState else { fatalError("Transfer not in progress.") }
-        guard let response = ts.response as? HTTPURLResponse else { fatalError("Header complete, but not URL response.") }
-        guard let session = task?.session as? URLSession else { fatalError() }
+        guard case .transferInProgress(let ts) = self.internalState else {
+            NSLog("_HTTPURLProtocol - Transfer not in progress.")
+            return
+        }
+        guard let response = ts.response as? HTTPURLResponse else {
+            NSLog("_HTTPURLProtocol - Header complete, but not URL response.")
+            return
+        }
+        guard let session = task?.session as? URLSession else {
+            NSLog("_HTTPURLProtocol - No URLSession.")
+            return
+        }
         switch session.behaviour(for: self.task!) {
         case .noDelegate:
             break
@@ -728,7 +750,10 @@ internal extension _HTTPURLProtocol {
         components.percentEncodedQuery = targetURL.query
         components.percentEncodedFragment = targetURL.fragment
 
-        guard let url = components.url else { fatalError("Invalid URL") }
+        guard let url = components.url else {
+            NSLog("redirectRequest - Invalid URL")
+            return nil
+        }
         request.url = url
 
         return request

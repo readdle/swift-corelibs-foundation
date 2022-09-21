@@ -752,7 +752,10 @@ public let URLSessionDownloadTaskResumeData: String = "NSURLSessionDownloadTaskR
 extension _ProtocolClient : URLProtocolClient {
 
     func urlProtocol(_ protocol: URLProtocol, didReceive response: URLResponse, cacheStoragePolicy policy: URLCache.StoragePolicy) {
-        guard let task = `protocol`.task else { fatalError("Received response, but there's no task.") }
+        guard let task = `protocol`.task else {
+            NSLog("urlProtocol.didReceive - Received response, but there's no task.")
+            return
+        }
         task.response = response
         let session = task.session as! URLSession
         guard let dataTask = task as? URLSessionDataTask else { return }
@@ -785,8 +788,14 @@ extension _ProtocolClient : URLProtocolClient {
     }
 
     func urlProtocolDidFinishLoading(_ urlProtocol: URLProtocol) {
-        guard let task = urlProtocol.task else { fatalError() }
-        guard let session = task.session as? URLSession else { fatalError() }
+        guard let task = urlProtocol.task else {
+            NSLog("urlProtocolDidFinishLoading - no task")
+            return
+        }
+        guard let session = task.session as? URLSession else {
+            NSLog("urlProtocolDidFinishLoading - no session")
+            return
+        }
         let urlResponse = task.response
         if let response = urlResponse as? HTTPURLResponse, response.statusCode == 401 {
             if let protectionSpace = URLProtectionSpace.create(with: response) {
@@ -853,20 +862,29 @@ extension _ProtocolClient : URLProtocolClient {
                 }
             }
         }
-        
+
         urlProtocolDidComplete(urlProtocol)
     }
 
     func urlProtocol(_ protocol: URLProtocol, didCancel challenge: URLAuthenticationChallenge) {
-        guard let task = `protocol`.task else { fatalError() }
+        guard let task = `protocol`.task else {
+            NSLog("urlProtocol.didCancel - no task")
+            return
+        }
         // Fail with a cancellation error, for now.
         urlProtocol(task: task, didFailWithError: NSError(domain: NSCocoaErrorDomain, code: CocoaError.userCancelled.rawValue))
     }
 
     func urlProtocol(_ protocol: URLProtocol, didReceive challenge: URLAuthenticationChallenge) {
-        guard let task = `protocol`.task else { fatalError("Received response, but there's no task.") }
-        guard let session = task.session as? URLSession else { fatalError("Task not associated with URLSession.") }
-        
+        guard let task = `protocol`.task else {
+            NSLog("urlProtocol - Received response, but there's no task.")
+            return
+        }
+        guard let session = task.session as? URLSession else {
+            NSLog("urlProtocol - Task not associated with URLSession.")
+            return
+        }
+
         func proceed(using credential: URLCredential?) {
             let protectionSpace = challenge.protectionSpace
             let authScheme = protectionSpace.authenticationMethod
@@ -874,7 +892,8 @@ extension _ProtocolClient : URLProtocolClient {
             task.suspend()
             
             guard let handler = URLSessionTask.authHandler(for: authScheme) else {
-                fatalError("\(authScheme) is not supported")
+                NSLog("\(authScheme) is not supported")
+                return
             }
             handler(task, .useCredential, credential)
 
@@ -947,9 +966,15 @@ extension _ProtocolClient : URLProtocolClient {
 
     func urlProtocol(_ protocol: URLProtocol, didLoad data: Data) {
         `protocol`.properties[.responseData] = data
-        guard let task = `protocol`.task else { fatalError() }
-        guard let session = task.session as? URLSession else { fatalError() }
-        
+        guard let task = `protocol`.task else {
+            NSLog("urlProtocol.didLoad - no task")
+            return
+        }
+        guard let session = task.session as? URLSession else {
+            NSLog("urlProtocol.didLoad - no sesssion")
+            return
+        }
+
         switch cachePolicy {
         case .allowed: fallthrough
         case .allowedInMemoryOnly:
@@ -971,8 +996,11 @@ extension _ProtocolClient : URLProtocolClient {
     }
 
     func urlProtocol(_ protocol: URLProtocol, didFailWithError error: Error) {
-        guard let task = `protocol`.task else { fatalError() }
-        
+        guard let task = `protocol`.task else {
+            NSLog("urlProtocol.didFailWithError - no task")
+            return
+        }
+
         if error._code == NSURLErrorServerCertificateUntrusted {
             let protectionSpace = URLProtectionSpace(host: "", port: 443, protocol: "https", realm: "",
                                                      authenticationMethod: NSURLAuthenticationMethodServerTrust)
@@ -989,7 +1017,10 @@ extension _ProtocolClient : URLProtocolClient {
     }
 
     func urlProtocol(task: URLSessionTask, didFailWithError error: Error) {
-        guard let session = task.session as? URLSession else { fatalError() }
+        guard let session = task.session as? URLSession else {
+            NSLog("urlProtocol.didFailWithError - no session")
+            return
+        }
         switch session.behaviour(for: task) {
         case .taskDelegate(let delegate):
             session.delegateQueue.addOperation {
@@ -1031,12 +1062,18 @@ extension _ProtocolClient : URLProtocolClient {
     func urlProtocol(_ protocol: URLProtocol, cachedResponseIsValid cachedResponse: CachedURLResponse) {}
 
     func urlProtocol(_ protocol: URLProtocol, wasRedirectedTo request: URLRequest, redirectResponse: URLResponse) {
-        fatalError("The URLSession swift-corelibs-foundation implementation doesn't currently handle redirects directly.")
+        NSLog("The URLSession swift-corelibs-foundation implementation doesn't currently handle redirects directly.")
     }
 
     private func urlProtocolDidComplete(_ urlProtocol: URLProtocol) {
-        guard let task = urlProtocol.task else { fatalError("Received response, but there's no task.") }
-        guard let session = task.session as? URLSession else { fatalError("Task not associated with URLSession.") }
+        guard let task = urlProtocol.task else {
+            NSLog("Received response, but there's no task.")
+            return
+        }
+        guard let session = task.session as? URLSession else {
+            NSLog("Task not associated with URLSession.")
+            return
+        }
 
         switch session.behaviour(for: task) {
         case .taskDelegate(let delegate):
