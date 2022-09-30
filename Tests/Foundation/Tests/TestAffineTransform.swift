@@ -96,16 +96,12 @@ extension TestAffineTransform {
             "ign@ign.com",
         ]
 
-        let dispatchQueue = DispatchQueue(label: "AvatarsManager")
-
         let email = "ign@ign.com"
         func doFetch() {
             print("-- >>> Requesting avatar for \(email)")
-            dispatchQueue.async {
-                favIconClient.requestImageFor(email: email) {
-                    print("-- >>> Got result for \(email)")
-                    doFetch()
-                }
+            favIconClient.requestImageFor(email: email) {
+                print("-- >>> Got result for \(email)")
+                doFetch()
             }
         }
         doFetch()

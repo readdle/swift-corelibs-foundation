@@ -22,14 +22,6 @@ public final class FavIconAddressAvatarsClient {
                        "https://\(domain)", 
                        "http://www.\(domain)", 
                        "http://www.\(domain)"]
-        if domain.contains("mail") {
-            // If domain contains word `mail` add options without `mail`
-            let domainWithoutMail = domain.replacingOccurrences(of: "mail", with: "")
-            domains += ["https://www.\(domainWithoutMail)", 
-                        "https://\(domainWithoutMail)", 
-                        "http://www.\(domainWithoutMail)", 
-                        "http://www.\(domainWithoutMail)"]
-        }
         downloadForDomain(domains, completion: completion)
     }
     
@@ -39,20 +31,13 @@ public final class FavIconAddressAvatarsClient {
             return
         }
 
-        guard let url = URL(string: domain) else {
-            print("-- CLIENT: requestImageForContact - bad email \(domain)")
-            completion()
-            return
-        }
+        let url = URL(string: domain)!
 
         print("-- CLIENT: Start checking \(url)")
         let nextDomain = domains.dropFirst()
-        FavIcon.scan(url) { icons in
-            print("-- CLIENT: Result of checking \(url): \(icons.count) icons")
-            guard icons.count > 0 else {
-                self.downloadForDomain(Array(nextDomain), completion: completion)
-                return
-            }
+        FavIcon.scan(url) {
+            print("-- CLIENT: Done checking \(url)")
+            self.downloadForDomain(Array(nextDomain), completion: completion)
         }
     }
 

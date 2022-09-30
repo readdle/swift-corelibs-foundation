@@ -88,9 +88,7 @@ func downloadURLs(_ urls: [URL], method: String = "GET", completion: @escaping (
 
             if let data = data {
                 let mimeType = response.mimeType ?? "application/octet-stream"
-                let encoding: String.Encoding = response.textEncodingName != nil
-                    ? parseStringEncoding(response.textEncodingName!) ?? .utf8
-                    : .utf8
+                let encoding: String.Encoding = .utf8
                 if mimeType.starts(with: "text/") || mimeType == "application/json" {
                     guard let text = String(data: data, encoding: encoding) else {
                         addResult(index, .error(DownloadError.invalidTextResponse))

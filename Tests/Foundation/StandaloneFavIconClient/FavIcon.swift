@@ -49,93 +49,26 @@ public final class FavIcon {
     /// - parameter completion: A closure to call when the scan has completed. The closure will be call
     ///                         on the main queue.
     public static func scan(_ url: URL,
-                            completion: @escaping ([Icon]) -> Void) {
+                            completion: @escaping () -> Void) {
         let htmlURL = url
         let favIconURL = URL(string: "/favicon.ico", relativeTo: url as URL)!.absoluteURL
 
-        var icons = [Icon]()
         let group = DispatchGroup()
 
         group.enter()
         downloadURL(favIconURL, method: "HEAD") { result in
             defer { group.leave() }
-            switch result {
-            case .exists:
-                icons.append(Icon(url: favIconURL, type: .classic))
-            default:
-                return
-            }
         }
 
         group.enter()
         downloadURL(htmlURL) { result in
             defer { group.leave() }
-
-            if case .text(let text, let mimeType, let downloadedURL) = result {
-                guard mimeType == "text/html" else { return }
-                guard let data = text.data(using: .utf8) else { return }
-
-                let document = HTMLDocument(data: data)
-
-                icons.append(contentsOf: detectHTMLHeadIcons(document, baseURL: downloadedURL))
-                for manifestURL in extractWebAppManifestURLs(document, baseURL: downloadedURL) {
-                    group.enter()
-                    downloadURL(manifestURL) { result in
-                        defer { group.leave() }
-                        if case .text(let text, _, let downloadedURL) = result {
-                            icons.append(contentsOf: detectWebAppManifestIcons(text, baseURL: downloadedURL))
-                        }
-                    }
-                }
-
-                let browserConfigResult = extractBrowserConfigURL(document, baseURL: url)
-                if let browserConfigURL = browserConfigResult.url, !browserConfigResult.disabled {
-                    group.enter()
-                    downloadURL(browserConfigURL) { result in
-                        defer { group.leave() }
-                        if case .text(let text, _, let downloadedURL) = result {
-                            let document = FavXMLDocument(string: text)
-                            icons.append(contentsOf: detectBrowserConfigXMLIcons(document, baseURL: downloadedURL))
-                        }
-                    }
-                }
-            }
         }
 
         group.notify(queue: DispatchQueue.global()) {
-            completion(icons)
+            completion()
         }
     }
 
-    /// Scans a base URL, attempting to determine all of the supported icons that can
-    /// be used for favicon purposes.
-    ///
-    /// It will do the following to determine possible icons that can be used:
-    ///
-    /// - Check whether or not `/favicon.ico` exists.
-    /// - If the base URL returns an HTML page, parse the `<head>` section and check for `<link>`
-    ///   and `<meta>` tags that reference icons using Apple, Microsoft and Google
-    ///   conventions.
-    /// - If _Web Application Manifest JSON_ (`manifest.json`) files are referenced, or
-    ///   _Microsoft browser configuration XML_ (`browserconfig.xml`) files
-    ///   are referenced, download and parse them to check if they reference icons.
-    ///
-    ///  All of this work is performed in a background queue.
-    ///
-    /// - parameter url: The base URL to scan.
-    /// - parameter completion: A closure to call when the scan has completed. The closure will be call
-    ///                         on the main queue.
-    public static func scan(_ url: String, completion: @escaping ([Icon]) -> Void) throws {
-        guard let url = URL(string: url) else { throw IconError.invalidBaseURL }
-        scan(url, completion: completion)
-    }
 }
 
-extension Icon {
-    var area: Int? {
-        if let width = width, let height = height {
-            return width * height
-        }
-        return nil
-    }
-}

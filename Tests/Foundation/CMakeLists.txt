@@ -117,15 +117,9 @@ target_sources(TestFoundation PRIVATE
   Tests/TestUUID.swift
   Tests/TestXMLDocument.swift
   Tests/TestXMLParser.swift
-  StandaloneFavIconClient/ContentTypes.swift
-  StandaloneFavIconClient/Detection.swift
   StandaloneFavIconClient/Download.swift
   StandaloneFavIconClient/FavIcon.swift
-  StandaloneFavIconClient/FavIconAddressAvatarsClient.swift
-  StandaloneFavIconClient/HTML.swift
-  StandaloneFavIconClient/Icon.swift
-  StandaloneFavIconClient/IconType.swift
-  StandaloneFavIconClient/XML.swift)
+  StandaloneFavIconClient/FavIconAddressAvatarsClient.swift)
 
 target_compile_definitions(TestFoundation PRIVATE
   $<$<BOOL:${ENABLE_TESTING}>:NS_FOUNDATION_ALLOWS_TESTABLE_IMPORT>)
