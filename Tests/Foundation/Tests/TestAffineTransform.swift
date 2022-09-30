@@ -94,38 +94,26 @@ extension TestAffineTransform {
             "ign@ign.com",
         ]
 
-        let domain = "ign.com"
+        // let domain = "ign.com"
         
-        var baseDomains = ["https://www.\(domain)", 
-                       "https://\(domain)", 
-                       "http://www.\(domain)", 
-                       "http://www.\(domain)"]
+        // var baseDomains = [
+        //     "https://www.\(domain)", 
+        //     "https://\(domain)", 
+        //     "http://www.\(domain)", 
+        //     "http://www.\(domain)"
+        // ]
 
-        func downloadForDomain(_ domains: [String], completion: @escaping () -> Void) {
-            guard let domain = domains.first else {
-                completion()
-                return
-            }
+        func downloadForDomain() {
+            let url = URL(string: "https://ign.com")!
 
-            let url = URL(string: domain)!
-
-            print("-- CLIENT: Start checking \(url)")
-            let nextDomain = domains.dropFirst()
+            print("-- Start checking \(url)")
             FavIcon.scan(url) {
-                print("-- CLIENT: Done checking \(url)")
-                downloadForDomain(Array(nextDomain), completion: completion)
+                print("-- Done checking \(url)")
+                downloadForDomain()
             }
         }
-        
-        func doFetch() {
-            print("-- >>> Requesting avatar for \(domain)")
-            downloadForDomain(baseDomains) {
-                print("-- >>> Got result for \(domain)")
-                doFetch()
-            }
-        }
-        doFetch()
 
+        downloadForDomain()
         Thread.sleep(forTimeInterval: 30.0)
 
         print("DONE")
