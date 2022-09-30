@@ -94,17 +94,23 @@ extension TestAffineTransform {
             "ign@ign.com",
         ]
 
+        let downloadSession = URLSession(configuration: .default)
+
         func downloadForDomain() {
             let url = URL(string: "https://ign.com")!
 
             print("-- Start checking \(url)")
             let favIconURL = URL(string: "/favicon.ico", relativeTo: url as URL)!.absoluteURL
 
-            downloadURL(favIconURL, method: "HEAD") { result in
+            var request = URLRequest(url: favIconURL)
+            request.httpMethod = "HEAD"
+            request.timeoutInterval = 30
+            let task = downloadSession.dataTask(with: request) { data, response, error in
                 print("-- Done checking \(url)")
                 downloadForDomain()
             }
 
+            task.resume()
         }
 
         downloadForDomain()

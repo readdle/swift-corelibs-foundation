@@ -114,8 +114,7 @@ target_sources(TestFoundation PRIVATE
   Tests/TestUtils.swift
   Tests/TestUUID.swift
   Tests/TestXMLDocument.swift
-  Tests/TestXMLParser.swift
-  StandaloneFavIconClient/Download.swift)
+  Tests/TestXMLParser.swift)
 
 target_compile_definitions(TestFoundation PRIVATE
   $<$<BOOL:${ENABLE_TESTING}>:NS_FOUNDATION_ALLOWS_TESTABLE_IMPORT>)
