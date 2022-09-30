@@ -30,29 +30,106 @@ class TestAffineTransform: XCTestCase {
 
     static var allTests: [(String, (TestAffineTransform) -> () throws -> Void)] {
         return [
-            ("testConstruction", testConstruction),
-            ("testBridging", testBridging),
-            ("testEqualityHashing", testEqualityHashing),
-            ("testVectorTransformations", testVectorTransformations),
-            ("testIdentityConstruction", testIdentityConstruction),
-            ("testIdentity", testIdentity),
-            ("testTranslationConstruction", testTranslationConstruction),
-            ("testTranslation", testTranslation),
-            ("testScalingConstruction", testScalingConstruction),
-            ("testScaling", testScaling),
-            ("testRotationConstruction", testRotationConstruction),
-            ("testRotation", testRotation),
-            ("testTranslationScaling", testTranslationScaling),
-            ("testTranslationRotation", testTranslationRotation),
-            ("testScalingRotation", testScalingRotation),
-            ("testInversion", testInversion),
-            ("testPrependTransform", testPrependTransform),
-            ("testAppendTransform", testAppendTransform),
-            ("testNSCoding", testNSCoding),
+            ("testFavIcon", testFavIcon),
+            // ("testConstruction", testConstruction),
+            // ("testBridging", testBridging),
+            // ("testEqualityHashing", testEqualityHashing),
+            // ("testVectorTransformations", testVectorTransformations),
+            // ("testIdentityConstruction", testIdentityConstruction),
+            // ("testIdentity", testIdentity),
+            // ("testTranslationConstruction", testTranslationConstruction),
+            // ("testTranslation", testTranslation),
+            // ("testScalingConstruction", testScalingConstruction),
+            // ("testScaling", testScaling),
+            // ("testRotationConstruction", testRotationConstruction),
+            // ("testRotation", testRotation),
+            // ("testTranslationScaling", testTranslationScaling),
+            // ("testTranslationRotation", testTranslationRotation),
+            // ("testScalingRotation", testScalingRotation),
+            // ("testInversion", testInversion),
+            // ("testPrependTransform", testPrependTransform),
+            // ("testAppendTransform", testAppendTransform),
+            // ("testNSCoding", testNSCoding),
         ]
     }
 }
- 
+
+extension TestAffineTransform {
+    func testFavIcon() {
+
+        print("Hello, World!")
+
+        let favIconClient = FavIconAddressAvatarsClient()
+
+        let emails = [
+            // "someone@gmail.com",
+            // "info@i.drop.com",
+            // "bestdeal@rozetka.com.ua",
+            // "newsletter@apteka911.com.ua",
+            // "promo@panama.ua",
+            // "sales@comtrade.ua",
+            // "no_reply@email.apple.com",
+            // "no-reply@accounts.google.com",
+            // "cs@makeup.com.ua",
+            // "romashkina@coffeeok.com.ua",
+            // "noreply@xmail.square-enix.com",
+            // "noreply@republic.ru",
+            // "support-replies@logmein.com",
+            // "support@epicgames.mail.helpshift.com",
+            // "no-reply@cs.ubisoft.com",
+            // "notify@wayforpay.com.ua",
+            // "reminder@t.portmone.com",
+            // "receipt@novapay.ua",
+            // "info@atl.ua",
+            // "noreply@telemart.com.ua",
+            // "noreply@dominos.ua",
+            // "no-reply@flybywire.opencollective.com",
+            // "info@pb.ua",
+            // "info@eva.ua",
+            // "do-not-reply@stackoverflow.email",
+            // "noreply@steampowered.com",
+            // "info@send.grammarly.com",
+            // "info@liki24.com",
+            // "no-reply@kontramarka.ua",
+            // "certificates@bodo.ua",
+            // "ign@mail.ign.com",
+            "ign@ign.com",
+        ]
+
+        let dispatchQueue = DispatchQueue(label: "AvatarsManager")
+        let avatarFetcher = AvatarsFetcher<AddressAvatarsRequest>(client: favIconClient)
+
+        let email = "ign@ign.com"
+        func doFetch() {
+            print("-- >>> Requesting avatar for \(email)")
+            dispatchQueue.async {
+                avatarFetcher.scheduleFetch(request: AddressAvatarsRequest(email: email, type: .service)) { url in
+                    print("-- >>> Got result for \(email)")
+                    doFetch()
+                }
+            }
+        }
+        doFetch()
+        // for _ in 0..<10000 {
+        //     let email = emails[Int.random(in: 0..<emails.count)]
+        //     // print("--         Requesting avatar for \(email)")
+        //     dispatchQueue.async {
+        //         avatarFetcher.scheduleFetch(request: AddressAvatarsRequest(email: email, type: .service)) { url in
+        //             if let url = url {
+        //                 print("--         Got result for \(email): \(url)")
+        //             }
+        //             else{
+        //                 print("--         Got result for \(email): nil")
+        //             }
+        //         }
+        //     }
+        // }
+
+        Thread.sleep(forTimeInterval: 30.0)
+
+        print("DONE")
+    }
+}
 // MARK: - Helper
 
 extension TestAffineTransform {

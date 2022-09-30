@@ -1,0 +1,4 @@
+module libxml [system] {
+    header "libxml.h"
+    export *
+}
