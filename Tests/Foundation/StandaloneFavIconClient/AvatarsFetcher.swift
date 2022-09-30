@@ -4,11 +4,6 @@
 
 import Foundation
 
-public typealias FetchProgress = (_: URL?) -> Void
-
-private typealias DedublicatorCompletion = () -> Void
-private typealias DedublicatorTask = (@escaping DedublicatorCompletion) -> Void
-
 public final class AvatarsFetcher<Request: AvatarRequest> {
 
     private let client: AvatarsClient<Request>
@@ -18,11 +13,11 @@ public final class AvatarsFetcher<Request: AvatarRequest> {
 
     public init(client: AvatarsClient<Request>) {
         self.client = client
-        self.requestLimiter = DispatchSemaphore(value: 7)
+        self.requestLimiter = nil //DispatchSemaphore(value: 7)
     }
 
     // MARK: - Fetch logic
-    public func scheduleFetch(request: Request, progress: @escaping FetchProgress) {
+    public func scheduleFetch(request: Request, progress: @escaping (URL?) -> Void) {
         let requestKey = request.key
         
         print("-- FETCHR: Start check avatar for key: \(requestKey)")

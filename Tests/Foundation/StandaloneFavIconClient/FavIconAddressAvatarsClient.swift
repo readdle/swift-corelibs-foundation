@@ -9,22 +9,6 @@ import FoundationNetworking
 
 public final class FavIconAddressAvatarsClient: AvatarsClient<AddressAvatarsRequest> {
      
-    private let iconComparator: (Icon, Icon) -> Bool = { l, r in
-        if l.type.isNotIconImage {
-            return false
-        }
-        if r.type.isNotIconImage {
-            return true
-        }
-        let lImageInfo = ImageInfo(url: l.url, mime: "", width: l.width ?? 0, height: l.height ?? 0)
-        let rImageInfo = ImageInfo(url: r.url, mime: "", width: r.width ?? 0, height: r.height ?? 0)
-        let imagesInfo = [lImageInfo, rImageInfo]
-        if let url = AvatarImageQualifier.chooseBestImage(imageInfos: imagesInfo)?.url, url == r.url {
-            return false
-        }
-        return true
-    }
-
     override public var name: String {
         return "FavIcon"
     }
@@ -77,11 +61,6 @@ public final class FavIconAddressAvatarsClient: AvatarsClient<AddressAvatarsRequ
                 self.downloadForDomain(Array(nextDomain), completion: completion)
                 return
             }
-            let sortedIcons = icons.sorted(by: self.iconComparator)
-            sortedIcons.forEach { icon in
-                print("-- CLIENT: Icon for \(domain) -> \(icon.url) with size: \(icon.width ?? 0)x\(icon.height ?? 0) and type: \(icon.type)")
-            }
-            self.checkIcons(domain: domain, icons: sortedIcons, completion: completion)
         }
     }
 

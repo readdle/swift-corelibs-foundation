@@ -118,7 +118,6 @@ target_sources(TestFoundation PRIVATE
   Tests/TestXMLDocument.swift
   Tests/TestXMLParser.swift
   StandaloneFavIconClient/AddressAvatarsRequest.swift
-  StandaloneFavIconClient/AvatarImageQualifier.swift
   StandaloneFavIconClient/AvatarInfo.swift
   StandaloneFavIconClient/AvatarRequest.swift
   StandaloneFavIconClient/AvatarsClient.swift
