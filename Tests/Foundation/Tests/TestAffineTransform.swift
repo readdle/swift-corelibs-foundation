@@ -94,23 +94,17 @@ extension TestAffineTransform {
             "ign@ign.com",
         ]
 
-        // let domain = "ign.com"
-        
-        // var baseDomains = [
-        //     "https://www.\(domain)", 
-        //     "https://\(domain)", 
-        //     "http://www.\(domain)", 
-        //     "http://www.\(domain)"
-        // ]
-
         func downloadForDomain() {
             let url = URL(string: "https://ign.com")!
 
             print("-- Start checking \(url)")
-            FavIcon.scan(url) {
+            let favIconURL = URL(string: "/favicon.ico", relativeTo: url as URL)!.absoluteURL
+
+            downloadURL(favIconURL, method: "HEAD") { result in
                 print("-- Done checking \(url)")
                 downloadForDomain()
             }
+
         }
 
         downloadForDomain()
