@@ -1,5 +1,3 @@
-find_package(LibXml2 REQUIRED)
-
 add_executable(TestFoundation
   main.swift
   HTTPServer.swift
@@ -118,12 +116,10 @@ target_sources(TestFoundation PRIVATE
   Tests/TestXMLDocument.swift
   Tests/TestXMLParser.swift
   StandaloneFavIconClient/Download.swift
-  StandaloneFavIconClient/FavIcon.swift
-  StandaloneFavIconClient/FavIconAddressAvatarsClient.swift)
+  StandaloneFavIconClient/FavIcon.swift)
 
 target_compile_definitions(TestFoundation PRIVATE
   $<$<BOOL:${ENABLE_TESTING}>:NS_FOUNDATION_ALLOWS_TESTABLE_IMPORT>)
-target_compile_options(TestFoundation PRIVATE "-I${CMAKE_CURRENT_SOURCE_DIR}/Modules/")
 
 target_link_libraries(TestFoundation PRIVATE
   Foundation
@@ -131,8 +127,6 @@ target_link_libraries(TestFoundation PRIVATE
   FoundationXML)
 target_link_libraries(TestFoundation PRIVATE
   XCTest)
-target_link_libraries(TestFoundation PRIVATE
-  LibXml2::LibXml2)
 
 # NOTE(compnerd) create a test "app" directory as we need the xdgTestHelper as
 # an executable peer and the binary will be placed in the directory with the

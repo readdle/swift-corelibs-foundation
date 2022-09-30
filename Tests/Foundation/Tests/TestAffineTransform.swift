@@ -59,8 +59,6 @@ extension TestAffineTransform {
 
         print("Hello, World!")
 
-        let favIconClient = FavIconAddressAvatarsClient()
-
         let emails = [
             // "someone@gmail.com",
             // "info@i.drop.com",
@@ -96,11 +94,33 @@ extension TestAffineTransform {
             "ign@ign.com",
         ]
 
-        let email = "ign@ign.com"
+        let domain = "ign.com"
+        
+        var baseDomains = ["https://www.\(domain)", 
+                       "https://\(domain)", 
+                       "http://www.\(domain)", 
+                       "http://www.\(domain)"]
+
+        func downloadForDomain(_ domains: [String], completion: @escaping () -> Void) {
+            guard let domain = domains.first else {
+                completion()
+                return
+            }
+
+            let url = URL(string: domain)!
+
+            print("-- CLIENT: Start checking \(url)")
+            let nextDomain = domains.dropFirst()
+            FavIcon.scan(url) {
+                print("-- CLIENT: Done checking \(url)")
+                downloadForDomain(Array(nextDomain), completion: completion)
+            }
+        }
+        
         func doFetch() {
-            print("-- >>> Requesting avatar for \(email)")
-            favIconClient.requestImageFor(email: email) {
-                print("-- >>> Got result for \(email)")
+            print("-- >>> Requesting avatar for \(domain)")
+            downloadForDomain(baseDomains) {
+                print("-- >>> Got result for \(domain)")
                 doFetch()
             }
         }
