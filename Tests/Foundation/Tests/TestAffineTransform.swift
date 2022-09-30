@@ -97,33 +97,18 @@ extension TestAffineTransform {
         ]
 
         let dispatchQueue = DispatchQueue(label: "AvatarsManager")
-        let avatarFetcher = AvatarsFetcher<AddressAvatarsRequest>(client: favIconClient)
 
         let email = "ign@ign.com"
         func doFetch() {
             print("-- >>> Requesting avatar for \(email)")
             dispatchQueue.async {
-                avatarFetcher.scheduleFetch(request: AddressAvatarsRequest(email: email, type: .service)) { url in
+                favIconClient.requestImageFor(email: email) {
                     print("-- >>> Got result for \(email)")
                     doFetch()
                 }
             }
         }
         doFetch()
-        // for _ in 0..<10000 {
-        //     let email = emails[Int.random(in: 0..<emails.count)]
-        //     // print("--         Requesting avatar for \(email)")
-        //     dispatchQueue.async {
-        //         avatarFetcher.scheduleFetch(request: AddressAvatarsRequest(email: email, type: .service)) { url in
-        //             if let url = url {
-        //                 print("--         Got result for \(email): \(url)")
-        //             }
-        //             else{
-        //                 print("--         Got result for \(email): nil")
-        //             }
-        //         }
-        //     }
-        // }
 
         Thread.sleep(forTimeInterval: 30.0)
 

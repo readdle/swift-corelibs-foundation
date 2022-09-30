@@ -131,7 +131,6 @@ target_sources(TestFoundation PRIVATE
   StandaloneFavIconClient/Icon.swift
   StandaloneFavIconClient/IconType.swift
   StandaloneFavIconClient/NSLocking+Readdle.swift
-  StandaloneFavIconClient/TaskDeduplicator.swift
   StandaloneFavIconClient/XML.swift)
 
 target_compile_definitions(TestFoundation PRIVATE

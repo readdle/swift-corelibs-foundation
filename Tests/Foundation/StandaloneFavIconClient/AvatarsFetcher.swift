@@ -4,50 +4,24 @@
 
 import Foundation
 
-public final class AvatarsFetcher<Request: AvatarRequest> {
+public final class AvatarsFetcher {
 
-    private let client: AvatarsClient<Request>
-    private let requestLimiter: DispatchSemaphore?
+    // private let client: FavIconAddressAvatarsClient
+    // private let requestLimiter: DispatchSemaphore?
+
+    // public init(client: FavIconAddressAvatarsClient) {
+    //     self.client = client
+    //     self.requestLimiter = nil //DispatchSemaphore(value: 7)
+    // }
+
+    // // MARK: - Fetch logic
+    // public func scheduleFetch(forEmail email: String, progress: @escaping (URL?) -> Void) {
+    //     print("-- FETCHR: Start fetch avatar for \(email)")
+    //     client.requestImageFor(email: email, with: { result in
+    //         print("-- FETCHR: Finish fetching avatar for \(email)")
+    //         progress(nil)
+    //     })
+
+    // }
     
-    private let taskDeduplicator = TaskDeduplicator<AvatarInfo>()
-
-    public init(client: AvatarsClient<Request>) {
-        self.client = client
-        self.requestLimiter = nil //DispatchSemaphore(value: 7)
-    }
-
-    // MARK: - Fetch logic
-    public func scheduleFetch(request: Request, progress: @escaping (URL?) -> Void) {
-        let requestKey = request.key
-        
-        print("-- FETCHR: Start check avatar for key: \(requestKey)")
-        self.fetchAvatar(request: request, client: self.client) {
-            print("-- FETCHR: Finish check avatar for key: \(requestKey)")
-            progress(nil)
-        }
-
-    }
-    
-    // MARK: - Private
-    
-    private func fetchAvatar(request: Request,
-                             client: AvatarsClient<Request>,
-                             completion: @escaping () -> Void ) {
-
-        requestLimiter?.wait()
-        print("-- FETCHR: Start checking client \(client.name) fetch avatar for key: \(request.key)")
-        client.requestImageFor(request: request, with: { result in
-            self.requestLimiter?.signal()
-            if case .success(let url) = result {
-                print("-- FETCHR: Finish checking client \(client.name) fetch avatar for key: \(request.key)")
-                completion()
-            }
-            else {
-                print("-- FETCHR: Finish checking client \(client.name) fetch avatar for key: \(request.key), request failed")
-                completion()
-            }
-        })
-    
-    }
-
 }

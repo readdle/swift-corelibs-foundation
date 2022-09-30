@@ -7,24 +7,16 @@ import Foundation
 import FoundationNetworking
 #endif
 
-public final class FavIconAddressAvatarsClient: AvatarsClient<AddressAvatarsRequest> {
-     
-    override public var name: String {
-        return "FavIcon"
-    }
-
-    override public var ttl: TimeInterval {
-        return 7 * 86_400
-    }
-
-    override public func requestImageFor(request: AddressAvatarsRequest, with completion: @escaping AvatarFetchCompletion) {
+public final class FavIconAddressAvatarsClient {
+    
+    public func requestImageFor(email: String, with completion: @escaping () -> Void) {
         func extractDomain(_ email: String) -> String {
             let index = email.range(of: "@", options: .backwards)!.lowerBound
             let next = email.index(after: index)
             return String(email.suffix(from: next))
         }
 
-        let domain = extractDomain(request.email)
+        let domain = extractDomain(email)
         
         var domains = ["https://www.\(domain)", 
                        "https://\(domain)", 
@@ -41,15 +33,15 @@ public final class FavIconAddressAvatarsClient: AvatarsClient<AddressAvatarsRequ
         downloadForDomain(domains, completion: completion)
     }
     
-    private func downloadForDomain(_ domains: [String], completion: @escaping AvatarFetchCompletion) {
+    private func downloadForDomain(_ domains: [String], completion: @escaping () -> Void) {
         guard let domain = domains.first else {
-            completion(.failure(AvatarClientError.invalidArgument))
+            completion()
             return
         }
 
         guard let url = URL(string: domain) else {
             print("-- CLIENT: requestImageForContact - bad email \(domain)")
-            completion(.failure(AvatarClientError.invalidArgument))
+            completion()
             return
         }
 
@@ -64,16 +56,8 @@ public final class FavIconAddressAvatarsClient: AvatarsClient<AddressAvatarsRequ
         }
     }
 
-    private func checkIcons(domain: String, icons: [Icon], completion: @escaping AvatarFetchCompletion) {
-        completion(.success(nil))
-    }
-
-}
-
-extension IconType {
-
-    var isNotIconImage: Bool {
-        return self == .microsoftPinnedSite || self == .openGraphImage
+    private func checkIcons(domain: String, icons: [Icon], completion: @escaping () -> Void) {
+        completion()
     }
 
 }
