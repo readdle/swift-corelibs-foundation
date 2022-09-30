@@ -117,11 +117,6 @@ target_sources(TestFoundation PRIVATE
   Tests/TestUUID.swift
   Tests/TestXMLDocument.swift
   Tests/TestXMLParser.swift
-  StandaloneFavIconClient/AddressAvatarsRequest.swift
-  StandaloneFavIconClient/AvatarInfo.swift
-  StandaloneFavIconClient/AvatarRequest.swift
-  StandaloneFavIconClient/AvatarsClient.swift
-  StandaloneFavIconClient/AvatarsFetcher.swift
   StandaloneFavIconClient/ContentTypes.swift
   StandaloneFavIconClient/Detection.swift
   StandaloneFavIconClient/Download.swift
@@ -130,7 +125,6 @@ target_sources(TestFoundation PRIVATE
   StandaloneFavIconClient/HTML.swift
   StandaloneFavIconClient/Icon.swift
   StandaloneFavIconClient/IconType.swift
-  StandaloneFavIconClient/NSLocking+Readdle.swift
   StandaloneFavIconClient/XML.swift)
 
 target_compile_definitions(TestFoundation PRIVATE
