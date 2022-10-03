@@ -133,7 +133,9 @@ fileprivate extension URLSession._MultiHandle {
             let handler = DispatchWorkItem { [weak self] in
                 self?.performAction(for: socket)
             }
-            ss.createSources(with: action, socket: socket, queue: queue, handler: handler)
+            queue.async {
+                ss.createSources(with: action, socket: socket, queue: self.queue, handler: handler)
+            }
         }
         return 0
     }
