@@ -219,7 +219,7 @@ extension _BodyFileSource {
             case (false, let d?, 0):
                 self.append(data: d, endOfFile: false)
             default:
-                fatalError("Invalid arguments to read(3) callback.")
+                NSLog("readNextChunk - Invalid arguments to read(3) callback.")
             }
             
             if wasEmpty && (0 < self.availableByteCount) {
@@ -238,7 +238,7 @@ extension _BodyFileSource {
             oldData.append(data)
             availableChunk = endOfFile ? .done(oldData) : .data(oldData)
         case .done:
-            fatalError("Trying to append data, but end-of-file was already detected.")
+            NSLog("append - Trying to append data, but end-of-file was already detected.")
         }
     }
 
