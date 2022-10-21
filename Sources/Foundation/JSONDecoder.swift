@@ -9,7 +9,7 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
-/*
+
 @_implementationOnly import CoreFoundation
 
 /// A marker protocol used to determine whether a value is a `String`-keyed `Dictionary`
@@ -1014,4 +1014,3 @@ extension JSONDecoderImpl {
         }
     }
 }
-*/
