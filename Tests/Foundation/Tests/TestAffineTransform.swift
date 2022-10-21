@@ -83,27 +83,27 @@ extension TestAffineTransform {
         )
         
         XCTAssertEqual(
-            newPoint.x, expectedPoint.x,
+            Double(newPoint.x), Double(expectedPoint.x),
             accuracy: accuracyThreshold,
             "Invalid x: \(message)",
             file: file, line: line
         )
         
         XCTAssertEqual(
-            newPoint.y, expectedPoint.y,
+            Double(newPoint.y), Double(expectedPoint.y),
             accuracy: accuracyThreshold,
             "Invalid y: \(message)",
             file: file, line: line
         )
         
         XCTAssertEqual(
-            newSize.width, expectedSize.width,
+            Double(newSize.width), Double(expectedSize.width),
             accuracy: accuracyThreshold,
             "Invalid width: \(message)",
             file: file, line: line
         )
         XCTAssertEqual(
-            newSize.height, expectedSize.height,
+            Double(newSize.height), Double(expectedSize.height),
             accuracy: accuracyThreshold,
             "Invalid height: \(message)",
             file: file, line: line
