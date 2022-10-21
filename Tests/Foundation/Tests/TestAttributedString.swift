@@ -23,7 +23,7 @@
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 final class TestAttributedString: XCTestCase {
     // MARK: - Enumeration Tests
-
+/*
     func testEmptyEnumeration() {
         for _ in AttributedString().runs {
             XCTFail("Empty AttributedString should not enumerate any attributes")
@@ -2149,8 +2149,10 @@ E {
         XCTAssertEqual(str, expected)
     }
 #endif
-    
+    */
+
     static var allTests: [(String, (TestAttributedString) -> () throws -> Void)] {
+        /*
         var tests = [
             ("testEmptyEnumeration", testEmptyEnumeration),
             ("testSimpleEnumeration", testSimpleEnumeration),
@@ -2254,10 +2256,12 @@ E {
         #endif
 
         return tests
+        */
+        return []
     }
 
 }
-
+/*
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 fileprivate extension AttributedString {
     var string : String {
@@ -2271,3 +2275,4 @@ fileprivate extension AttributedSubstring {
         return _guts.string[_range._stringRange]
     }
 }
+*/
