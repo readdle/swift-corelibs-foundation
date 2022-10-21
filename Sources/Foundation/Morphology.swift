@@ -308,10 +308,7 @@ extension Morphology {
         }
 
         public static func requiredKeys(forLanguage language: String) -> [PartialKeyPath<Self>] {
-            guard self.isSupported(forLanguage: language) else {
-                return []
-            }
-            return [\.subjectForm, \.objectForm, \.possessiveForm, \.possessiveAdjectiveForm, \.reflexiveForm]
+            return []
         }
         
         fileprivate func validate(forLanguage language: String) -> Bool {
