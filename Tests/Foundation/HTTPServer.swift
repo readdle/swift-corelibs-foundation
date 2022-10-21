@@ -14,8 +14,8 @@
 
 import Dispatch
 
-#if canImport(CRT)
-    import CRT
+#if canImport(MSVCRT)
+    import MSVCRT
     import WinSDK
 #elseif canImport(Darwin)
     import Darwin
