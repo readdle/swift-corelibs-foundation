@@ -197,7 +197,7 @@ open class JSONDecoder {
         do {
             var parser = JSONParser(bytes: Array(data))
             let json = try parser.parse()
-            return try JSONDecoderImpl(userInfo: self.userInfo, from: json, codingPath: [], options: self.options).unwrap(as: T.self)
+            return try JSONDecoderImpl(userInfo: self.userInfo, from: json, codingPath: [], options: self.options).unwrap(as: type)
         } catch let error as JSONError {
             throw DecodingError.dataCorrupted(DecodingError.Context(codingPath: [], debugDescription: "The given data was not valid JSON.", underlyingError: error))
         } catch {
@@ -296,7 +296,7 @@ extension JSONDecoderImpl: Decoder {
             return try self.unwrapDictionary(as: T.self)
         }
 
-        return try T(from: self)
+        return try type.init(from: self)
     }
 
     private func unwrapDate() throws -> Date {
