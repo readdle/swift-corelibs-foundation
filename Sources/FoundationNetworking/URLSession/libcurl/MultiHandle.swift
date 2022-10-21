@@ -43,6 +43,7 @@ extension URLSession {
     internal final class _MultiHandle {
         let rawHandle = CFURLSessionMultiHandleInit()
         let queue: DispatchQueue
+        let socketSourcesQueue: DispatchQueue
         let group = DispatchGroup()
         fileprivate var easyHandles: [_EasyHandle] = []
         fileprivate var timeoutSource: _TimeoutSource? = nil
@@ -50,6 +51,7 @@ extension URLSession {
         
         init(configuration: URLSession._Configuration, workQueue: DispatchQueue) {
             queue = DispatchQueue(label: "MultiHandle.isolation", target: workQueue)
+            socketSourcesQueue = DispatchQueue(label: "MultiHandle.socketSources")
             setupCallbacks()
             configure(with: configuration)
         }
@@ -127,15 +129,19 @@ fileprivate extension URLSession._MultiHandle {
             if let opaque = socketSourcePtr {
                 Unmanaged<_SocketSources>.fromOpaque(opaque).release()
             }
+            socketSources?.tearDown()
             socketSources = nil
         }
         if let ss = socketSources {
             let handler = DispatchWorkItem { [weak self] in
-                self?.performAction(for: socket)
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.queue.async { [weak strongSelf] in
+                    strongSelf?.performAction(for: socket)
+                }
             }
-            queue.async {
-                ss.createSources(with: action, socket: socket, queue: self.queue, handler: handler)
-            }
+            ss.createSources(with: action, socket: socket, queue: socketSourcesQueue, handler: handler)
         }
         return 0
     }
@@ -456,16 +462,28 @@ fileprivate class _SocketSources {
     }
 
     func tearDown() {
+        let group = DispatchGroup()
         if let s = readSource {
+            group.enter()
+            s.setCancelHandler {
+                group.leave()
+            }
             s.cancel()
         }
-        readSource = nil
         if let s = writeSource {
+            group.enter()
+            s.setCancelHandler {
+                group.leave()
+            }
             s.cancel()
         }
+        group.wait()
+        readSource = nil
         writeSource = nil
     }
+
 }
+
 extension _SocketSources {
     /// Create a read and/or write source as specified by the action.
     func createSources(with action: URLSession._MultiHandle._SocketRegisterAction, socket: CFURLSession_socket_t, queue: DispatchQueue, handler: DispatchWorkItem) {
