@@ -15,6 +15,8 @@
     #endif
 #endif
 
+import WinSDK
+
 // MARK: - Vector
 
 // CGVector is only available on Darwin.
@@ -57,7 +59,7 @@ class TestAffineTransform: XCTestCase {
 extension TestAffineTransform {
     func testFavIcon() {
 
-        print("Hello, World!")
+        print("\(GetCurrentThreadId()) - [TestFoundation] Testing...")
 
         let emails = [
             // "someone@gmail.com",
@@ -99,14 +101,16 @@ extension TestAffineTransform {
         func downloadForDomain() {
             let url = URL(string: "https://ign.com")!
 
-            print("-- Start checking \(url)")
+            try! FileHandle.standardOutput.write(contentsOf: "     - [TestFoundation] Start checking \(url)\n".data(using: .utf8)!)
+            fflush(stdout)
+
             let favIconURL = URL(string: "/favicon.ico", relativeTo: url as URL)!.absoluteURL
 
-            var request = URLRequest(url: favIconURL)
-            request.httpMethod = "HEAD"
-            request.timeoutInterval = 30
+            let request = URLRequest(url: favIconURL)
             let task = downloadSession.dataTask(with: request) { data, response, error in
-                print("-- Done checking \(url)")
+                try! FileHandle.standardOutput.write(contentsOf: "     - [TestFoundation ]Done checking \(url)\n".data(using: .utf8)!)
+                fflush(stdout)
+                Thread.sleep(forTimeInterval: 0.1)
                 downloadForDomain()
             }
 

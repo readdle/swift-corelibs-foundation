@@ -84,6 +84,7 @@ internal class _NativeProtocol: URLProtocol, _EasyHandleDelegate {
                 fatalError("Need to solve pausing receive.")
             }
             if internalState.isEasyHandleAddedToMultiHandle && !newValue.isEasyHandleAddedToMultiHandle {
+                print("     - [Foundation] Removing easyHandle")
                 task?.session.remove(handle: easyHandle)
             }
         }

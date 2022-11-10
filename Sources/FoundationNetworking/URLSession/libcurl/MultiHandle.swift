@@ -43,6 +43,7 @@ extension URLSession {
     internal final class _MultiHandle {
         let rawHandle = CFURLSessionMultiHandleInit()
         let queue: DispatchQueue
+        let dsQueue: DispatchQueue
         let group = DispatchGroup()
         fileprivate var easyHandles: [_EasyHandle] = []
         fileprivate var timeoutSource: _TimeoutSource? = nil
@@ -50,6 +51,7 @@ extension URLSession {
         
         init(configuration: URLSession._Configuration, workQueue: DispatchQueue) {
             queue = DispatchQueue(label: "MultiHandle.isolation", target: workQueue)
+            dsQueue = DispatchQueue(label: "MultiHandle.sources")
             setupCallbacks()
             configure(with: configuration)
         }
@@ -116,6 +118,7 @@ fileprivate extension URLSession._MultiHandle {
         // a `SocketSources` which we in turn store inside libcurl's multi handle
         // by means of curl_multi_assign() -- we retain the object fist.
         let action = _SocketRegisterAction(rawValue: CFURLSessionPoll(value: what))
+        print("     - [Foundation] Socket action: \(action)")
         var socketSources = _SocketSources.from(socketSourcePtr: socketSourcePtr)
         if socketSources == nil && action.needsSource {
             let s = _SocketSources()
@@ -123,6 +126,7 @@ fileprivate extension URLSession._MultiHandle {
             CFURLSessionMultiHandleAssign(rawHandle, socket, UnsafeMutableRawPointer(p))
             socketSources = s
         } else if socketSources != nil && action == .unregister {
+            // socketSources?.tearDown()
             // We need to release the stored pointer:
             if let opaque = socketSourcePtr {
                 Unmanaged<_SocketSources>.fromOpaque(opaque).release()
@@ -131,9 +135,13 @@ fileprivate extension URLSession._MultiHandle {
         }
         if let ss = socketSources {
             let handler = DispatchWorkItem { [weak self] in
+                // self?.queue.async {
                 self?.performAction(for: socket)
+                // }
             }
-            ss.createSources(with: action, socket: socket, queue: queue, handler: handler)
+            queue.async {
+                ss.createSources(with: action, socket: socket, queue: self.queue, handler: handler)
+            }
         }
         return 0
     }
@@ -318,6 +326,24 @@ fileprivate extension URLSession._MultiHandle._SocketRegisterAction {
     }
 }
 
+extension URLSession._MultiHandle._SocketRegisterAction: CustomStringConvertible, CustomDebugStringConvertible {
+    
+    public var description: String {
+        switch self {
+        case .none: return "none"
+        case .registerRead: return "registerRead"
+        case .registerWrite: return "registerWrite"
+        case .registerReadAndWrite: return "registerReadAndWrite"
+        case .unregister: return "unregister"
+        } 
+    }
+    
+    public var debugDescription: String {
+        return description
+    }
+    
+}
+
 fileprivate extension URLSession._MultiHandle._SocketRegisterAction {
     /// Should a libdispatch source be registered for **read** readiness?
     var needsReadSource: Bool {
@@ -454,14 +480,32 @@ fileprivate class _SocketSources {
     }
 
     func tearDown() {
+        let group = DispatchGroup()
         if let s = readSource {
+            s.setCancelHandler {
+                print("     - [Foundation] Read source - cancel handler")
+                group.leave()
+            }
+            print("     - [Foundation] Tear down socket read source")
+            group.enter()
             s.cancel()
         }
         readSource = nil
         if let s = writeSource {
+            s.setCancelHandler {
+                print("     - [Foundation] Write source - cancel handler")
+                group.leave()
+            }
+            print("     - [Foundation] Tear down socket write source")
+            group.enter()
             s.cancel()
         }
         writeSource = nil
+        group.wait()
+    }
+
+    deinit {
+        print("     - [Foundation] deinit socket sources")
     }
 }
 extension _SocketSources {

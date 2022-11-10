@@ -675,6 +675,7 @@ internal extension _HTTPURLProtocol {
             // and we'll disregard the completion handler:
             switch response.statusCode {
             case 301, 302, 303, 305...308:
+                print("     - [Foundation] _HTTPURLProtocol didReceiveResonse \(response.statusCode)")
                 break
             default:
                 self.client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
@@ -693,7 +694,7 @@ internal extension _HTTPURLProtocol {
     /// - SeeAlso: <https://tools.ietf.org/html/rfc7231#section-6.4>
     func redirectRequest(for response: HTTPURLResponse, fromRequest: URLRequest) -> URLRequest? {
         //TODO: Do we ever want to redirect for HEAD requests?
-        
+        print("     - [Foundation] Got redirect request")
         guard
             let location = response.value(forHeaderField: .location),
             let targetURL = URL(string: location)
