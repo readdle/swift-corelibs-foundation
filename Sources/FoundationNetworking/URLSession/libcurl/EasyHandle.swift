@@ -572,17 +572,17 @@ fileprivate extension _EasyHandle {
         }.asError()
 
         // socket options
-        try! CFURLSession_easy_setopt_ptr(rawHandle, CFURLSessionOptionSOCKOPTDATA, UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())).asError()
-        try! CFURLSession_easy_setopt_sc(rawHandle, CFURLSessionOptionSOCKOPTFUNCTION) { (userdata: UnsafeMutableRawPointer?, fd: CInt, type: CFURLSessionSocketType) -> CInt in
-            guard let handle = _EasyHandle.from(callbackUserData: userdata) else { return 0 }
-            guard type == CFURLSessionSocketTypeIPCXN else { return 0 }
-            do {
-                try handle.setSocketOptions(for: fd)
-                return 0
-            } catch {
-                return 1
-            }
-        }.asError()
+//        try! CFURLSession_easy_setopt_ptr(rawHandle, CFURLSessionOptionSOCKOPTDATA, UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())).asError()
+//        try! CFURLSession_easy_setopt_sc(rawHandle, CFURLSessionOptionSOCKOPTFUNCTION) { (userdata: UnsafeMutableRawPointer?, fd: CInt, type: CFURLSessionSocketType) -> CInt in
+//            guard let handle = _EasyHandle.from(callbackUserData: userdata) else { return 0 }
+//            guard type == CFURLSessionSocketTypeIPCXN else { return 0 }
+//            do {
+//                try handle.setSocketOptions(for: fd)
+//                return 0
+//            } catch {
+//                return 1
+//            }
+//        }.asError()
         // seeking in input stream
         try! CFURLSession_easy_setopt_ptr(rawHandle, CFURLSessionOptionSEEKDATA, UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())).asError()
         try! CFURLSession_easy_setopt_seek(rawHandle, CFURLSessionOptionSEEKFUNCTION, { (userdata, offset, origin) -> Int32 in
@@ -610,6 +610,7 @@ fileprivate extension _EasyHandle {
     ///
     /// - SeeAlso: <https://curl.haxx.se/libcurl/c/CURLOPT_WRITEFUNCTION.html>
     func didReceive(data: UnsafeMutablePointer<Int8>, size: Int, nmemb: Int) -> Int {
+        print("[\(Thread.current)] -- URLSession._EasyHandle -- didReceive data - \(size * nmemb)")
         let d: Int = {
             let buffer = Data(bytes: data, count: size*nmemb)
             switch delegate?.didReceive(data: buffer) {
@@ -630,6 +631,7 @@ fileprivate extension _EasyHandle {
     ///
     /// - SeeAlso: <https://curl.haxx.se/libcurl/c/CURLOPT_HEADERFUNCTION.html>
     func didReceive(headerData data: UnsafeMutablePointer<Int8>, size: Int, nmemb: Int, contentLength: Double) -> Int {
+        print("[\(Thread.current)] -- URLSession._EasyHandle -- didReceive headerData - \(size * nmemb), content length \(contentLength)")
         let buffer = Data(bytes: data, count: size*nmemb)
         let d: Int = {
             switch delegate?.didReceive(headerData: buffer, contentLength: Int64(contentLength)) {

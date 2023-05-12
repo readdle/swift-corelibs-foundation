@@ -119,6 +119,7 @@ fileprivate extension URLSession._MultiHandle {
         // by means of curl_multi_assign() -- we retain the object fist.
         let action = _SocketRegisterAction(rawValue: CFURLSessionPoll(value: what))
         var socketSources = _SocketSources.from(socketSourcePtr: socketSourcePtr)
+        print("[\(Thread.current)] -- URLSession._MultiHandle -- register - socket: \(socket), action: \(what)")
         if socketSources == nil && action.needsSource {
             let s = _SocketSources()
             let p = Unmanaged.passRetained(s).toOpaque()
@@ -181,9 +182,9 @@ internal extension URLSession._MultiHandle {
         let needsTimeout = self.easyHandles.isEmpty
         self.easyHandles.append(handle)
         try! CFURLSessionMultiHandleAddHandle(self.rawHandle, handle.rawHandle).asError()
-        if needsTimeout {
-            self.timeoutTimerFired()
-        }
+//        if needsTimeout {
+//            self.timeoutTimerFired()
+//        }
     }
     /// Remove an easy handle -- stop its transfer.
     func remove(_ handle: _EasyHandle) {
@@ -198,12 +199,14 @@ internal extension URLSession._MultiHandle {
 fileprivate extension URLSession._MultiHandle {
     /// This gets called when we should ask curl to perform action on a socket.
     func performAction(for socket: CFURLSession_socket_t) {
+        print("[\(Thread.current)] -- URLSession._MultiHandle -- performAction - socket: \(socket)")
         try! readAndWriteAvailableData(on: socket)
     }
     /// This gets called when our timeout timer fires.
     ///
     /// libcurl relies on us calling curl_multi_socket_action() every now and then.
     func timeoutTimerFired() {
+        print("[\(Thread.current)] -- URLSession._MultiHandle -- timeoutTimerFired")
         try! readAndWriteAvailableData(on: CFURLSessionSocketTimeout)
     }
     /// reads/writes available data given an action
@@ -224,8 +227,12 @@ fileprivate extension URLSession._MultiHandle {
             // count will contain the messages left in the queue
             var count = Int32(0)
             let info = CFURLSessionMultiHandleInfoRead(rawHandle, &count)
-            guard let handle = info.easyHandle else { break }
+            guard let handle = info.easyHandle else {
+                print("[\(Thread.current)] -- URLSession._MultiHandle -- readMessages - no handle, exiting")
+                break
+            }
             let code = info.resultCode
+            print("[\(Thread.current)] -- URLSession._MultiHandle -- readMessages - finishing with code \(code)")
             completedTransfer(forEasyHandle: handle, easyCode: code)
         } while true
     }
@@ -371,7 +378,8 @@ class _TimeoutSource {
         let delay = UInt64(max(1, milliseconds - 1)) 
         let start = DispatchTime.now() + DispatchTimeInterval.milliseconds(Int(delay))
         
-        rawSource.schedule(deadline: start, repeating: .milliseconds(Int(delay)), leeway: (milliseconds == 1) ? .microseconds(Int(1)) : .milliseconds(Int(1)))
+//         rawSource.schedule(deadline: start, repeating: .milliseconds(Int(delay)), leeway: (milliseconds == 1) ? .microseconds(Int(1)) : .milliseconds(Int(1)))
+        rawSource.schedule(deadline: start, repeating: .never, leeway: (milliseconds == 1) ? .microseconds(Int(1)) : .milliseconds(Int(1)))
         rawSource.setEventHandler(handler: handler)
         rawSource.resume() 
     }
@@ -391,11 +399,14 @@ fileprivate extension URLSession._MultiHandle {
         // Set up a timeout timer based on the given value:
         switch timeout {
         case .none:
+            print("[\(Thread.current)] -- URLSession._MultiHandle -- updateTimeoutTimer - none")
             timeoutSource = nil
         case .immediate:
             timeoutSource = nil
+            print("[\(Thread.current)] -- URLSession._MultiHandle -- updateTimeoutTimer - immediate")
             queue.async { self.timeoutTimerFired() }
         case .milliseconds(let milliseconds):
+            print("[\(Thread.current)] -- URLSession._MultiHandle -- updateTimeoutTimer - \(milliseconds)")
             if (timeoutSource == nil) || timeoutSource!.milliseconds != milliseconds {
                 //TODO: Could simply change the existing timer by using DispatchSourceTimer again.
                 let block = DispatchWorkItem { [weak self] in

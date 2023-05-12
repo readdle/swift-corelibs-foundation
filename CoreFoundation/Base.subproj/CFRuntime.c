@@ -1182,7 +1182,7 @@ void __CFInitialize(void) {
 #if __HAS_DISPATCH__ && !TARGET_OS_MAC
     // libdispatch has to be initialized before CoreFoundation, so to avoid
     // issues with static initializer ordering, we are doing it explicitly.
-    libdispatch_init();
+//    libdispatch_init();
 #endif
 
     // This is a no-op on Darwin, but is needed on Linux and Windows.

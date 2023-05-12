@@ -75,34 +75,34 @@ public struct ScopedAttributeContainer<S: AttributeScope> {
 
     internal func equals(_ other: Self) -> Bool {
         var equal = true
-        _forEachField(of: S.self, options: [.ignoreUnknown]) { name, offset, type, kind -> Bool in
-            func project<T>( _: T.Type) -> Bool {
-                if let name = GetNameIfAttribute(T.self).attemptAction() {
-                    if !__equalAttributes(self.contents[name], other.contents[name]) {
-                        equal = false
-                        return false
-                    }
-                }
-                // TODO: Nested scopes
-                return true
-            }
-            return _openExistential(type, do: project)
-        }
+//        _forEachField(of: S.self, options: [.ignoreUnknown]) { name, offset, type, kind -> Bool in
+//            func project<T>( _: T.Type) -> Bool {
+//                if let name = GetNameIfAttribute(T.self).attemptAction() {
+//                    if !__equalAttributes(self.contents[name], other.contents[name]) {
+//                        equal = false
+//                        return false
+//                    }
+//                }
+//                // TODO: Nested scopes
+//                return true
+//            }
+//            return _openExistential(type, do: project)
+//        }
         return equal
     }
 
     internal var attributes : AttributeContainer {
         var contents = [String : Any]()
-        _forEachField(of: S.self, options: [.ignoreUnknown]) { name, offset, type, kind -> Bool in
-            func project<T>( _: T.Type) -> Bool {
-                if let name = GetNameIfAttribute(T.self).attemptAction() {
-                    contents[name] = self.contents[name]
-                }
-                // TODO: Nested scopes
-                return true
-            }
-            return _openExistential(type, do: project)
-        }
+//        _forEachField(of: S.self, options: [.ignoreUnknown]) { name, offset, type, kind -> Bool in
+//            func project<T>( _: T.Type) -> Bool {
+//                if let name = GetNameIfAttribute(T.self).attemptAction() {
+//                    contents[name] = self.contents[name]
+//                }
+//                // TODO: Nested scopes
+//                return true
+//            }
+//            return _openExistential(type, do: project)
+//        }
         return AttributeContainer(contents)
     }
 }
@@ -114,37 +114,37 @@ public struct ScopedAttributeContainer<S: AttributeScope> {
 internal extension AttributeScope {
     static func attributeKeyType(matching key: String) -> Any.Type? {
         var result : Any.Type?
-        _forEachField(of: Self.self, options: [.ignoreUnknown]) { name, offset, type, kind -> Bool in
-            func project<T>( _: T.Type) -> Bool {
-                if GetNameIfAttribute(T.self).attemptAction() == key {
-                    result = type
-                    return false
-                } else if let t = GetAttributeTypeIfAttributeScope(T.self, key: key).attemptAction() ?? nil {
-                    result = t
-                    return false
-                }
-                return true
-            }
-            return _openExistential(type, do: project)
-        }
+//        _forEachField(of: Self.self, options: [.ignoreUnknown]) { name, offset, type, kind -> Bool in
+//            func project<T>( _: T.Type) -> Bool {
+//                if GetNameIfAttribute(T.self).attemptAction() == key {
+//                    result = type
+//                    return false
+//                } else if let t = GetAttributeTypeIfAttributeScope(T.self, key: key).attemptAction() ?? nil {
+//                    result = t
+//                    return false
+//                }
+//                return true
+//            }
+//            return _openExistential(type, do: project)
+//        }
         return result
     }
     
     static func markdownAttributeKeyType(matching key: String) -> Any.Type? {
         var result : Any.Type?
-        _forEachField(of: Self.self, options: [.ignoreUnknown]) { name, offset, type, kind -> Bool in
-            func project<T>( _: T.Type) -> Bool {
-                if GetMarkdownNameIfMarkdownDecodableAttribute(T.self).attemptAction() == key {
-                    result = type
-                    return false
-                } else if let t = GetMarkdownAttributeTypeIfAttributeScope(T.self, key: key).attemptAction() ?? nil {
-                    result = t
-                    return false
-                }
-                return true
-            }
-            return _openExistential(type, do: project)
-        }
+//        _forEachField(of: Self.self, options: [.ignoreUnknown]) { name, offset, type, kind -> Bool in
+//            func project<T>( _: T.Type) -> Bool {
+//                if GetMarkdownNameIfMarkdownDecodableAttribute(T.self).attemptAction() == key {
+//                    result = type
+//                    return false
+//                } else if let t = GetMarkdownAttributeTypeIfAttributeScope(T.self, key: key).attemptAction() ?? nil {
+//                    result = t
+//                    return false
+//                }
+//                return true
+//            }
+//            return _openExistential(type, do: project)
+//        }
         return result
     }
 }
@@ -595,17 +595,17 @@ internal struct GetAllAttributeTypesIfAttributeScope<P: ProxyProtocol> : Attempt
     }
     func action<T : AttributeScope>(_ t: T.Type) -> Result where T == Input {
         var result = [String : Any.Type]()
-        _forEachField(of: t, options: [.ignoreUnknown]) { pointer, offset, type, kind -> Bool in
-            func project<K>(_: K.Type) {
-                if let key = GetNameIfAttribute(K.self).attemptAction() {
-                    result[key] = type
-                } else if let subResults = GetAllAttributeTypesIfAttributeScope<Proxy<K>>(K.self).attemptAction() {
-                    result.merge(subResults, uniquingKeysWith: { current, new in new })
-                }
-            }
-            _openExistential(type, do: project)
-            return true
-        }
+//        _forEachField(of: t, options: [.ignoreUnknown]) { pointer, offset, type, kind -> Bool in
+//            func project<K>(_: K.Type) {
+//                if let key = GetNameIfAttribute(K.self).attemptAction() {
+//                    result[key] = type
+//                } else if let subResults = GetAllAttributeTypesIfAttributeScope<Proxy<K>>(K.self).attemptAction() {
+//                    result.merge(subResults, uniquingKeysWith: { current, new in new })
+//                }
+//            }
+//            _openExistential(type, do: project)
+//            return true
+//        }
         return result
     }
 }

@@ -393,7 +393,7 @@ CF_INLINE void __CFSocketEstablishPeerAddress(CFSocketRef s) {
     }
 }
 
-static Boolean __CFNativeSocketIsValid(CFSocketNativeHandle sock) {
+Boolean __CFNativeSocketIsValid(CFSocketNativeHandle sock) {
     Boolean result;
 
 #if TARGET_OS_WIN32

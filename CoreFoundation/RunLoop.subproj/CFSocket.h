@@ -159,6 +159,7 @@ CF_EXPORT CFSocketError	CFSocketSetAddress(CFSocketRef s, CFDataRef address);
 CF_EXPORT CFSocketError	CFSocketConnectToAddress(CFSocketRef s, CFDataRef address, CFTimeInterval timeout);
 CF_EXPORT void		CFSocketInvalidate(CFSocketRef s);
 
+CF_EXPORT Boolean __CFNativeSocketIsValid(CFSocketNativeHandle sock);
 CF_EXPORT Boolean	CFSocketIsValid(CFSocketRef s);
 CF_EXPORT CFDataRef	CFSocketCopyAddress(CFSocketRef s);
 CF_EXPORT CFDataRef	CFSocketCopyPeerAddress(CFSocketRef s);

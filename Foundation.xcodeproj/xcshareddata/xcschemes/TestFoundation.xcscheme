@@ -115,6 +115,12 @@
             ReferencedContainer = "container:Foundation.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <CommandLineArguments>
+         <CommandLineArgument
+            argument = "TestFoundation.TestURLSession/test_timeout"
+            isEnabled = "YES">
+         </CommandLineArgument>
+      </CommandLineArguments>
       <AdditionalOptions>
          <AdditionalOption
             key = "DYLD_INSERT_LIBRARIES"

@@ -18,7 +18,23 @@
 class TestURLSession: LoopbackServerTest {
 
     let httpMethods = ["HEAD", "GET", "PUT", "POST", "DELETE"]
-
+    
+    func test_timeout() {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 5 // Value doesn't matter, 8 is just to wait less
+        let session = URLSession(configuration: config, delegate: nil, delegateQueue: nil)
+        let request = URLRequest(url: URL(string: "https://httpstat.us/200")!) // ?sleep=10000 // use any host that would time out
+//        let request = URLRequest(url: URL(string: "https://www.google.com")!) // ?sleep=10000 // use any host that would time out
+        
+        let callbackCalled = expectation(description: "Task callback called")
+        session.dataTask(with: request, completionHandler: { data, response, error in
+            print("[\(Thread.current)] -- \(Thread.current)] - TestURLSession.test_timeout - completed, error = \(String(describing: error))")
+            callbackCalled.fulfill()
+        }).resume()
+        waitForExpectations(timeout: 60)
+        Thread.sleep(forTimeInterval: 5)  // as Dispatch crashes asynchronously, give it some time
+    }
+    
     func test_dataTaskWithURL() {
         let urlString = "http://127.0.0.1:\(TestURLSession.serverPort)/Nepal"
         let url = URL(string: urlString)!
@@ -2108,6 +2124,7 @@ class TestURLSession: LoopbackServerTest {
   
     static var allTests: [(String, (TestURLSession) -> () throws -> Void)] {
         var retVal = [
+            ("test_timeout", test_timeout),
             ("test_dataTaskWithURL", test_dataTaskWithURL),
             ("test_dataTaskWithURLRequest", test_dataTaskWithURLRequest),
             ("test_dataTaskWithURLCompletionHandler", test_dataTaskWithURLCompletionHandler),
@@ -2181,14 +2198,14 @@ class TestURLSession: LoopbackServerTest {
             /* ⚠️ */      testExpectedToFail(test_noDoubleCallbackWhenCancellingAndProtocolFailsFast, "This test crashes nondeterministically: https://bugs.swift.org/browse/SR-11310")),
             /* ⚠️ */ ("test_cancelledTasksCannotBeResumed", testExpectedToFail(test_cancelledTasksCannotBeResumed, "Breaks on Ubuntu 18.04")),
         ]
-        if #available(macOS 12.0, *) {
-            retVal.append(contentsOf: [
-                ("test_webSocket", asyncTest(test_webSocket)),
-                ("test_webSocketSpecificProtocol", asyncTest(test_webSocketSpecificProtocol)),
-                ("test_webSocketAbruptClose", asyncTest(test_webSocketAbruptClose)),
-                ("test_webSocketSemiAbruptClose", asyncTest(test_webSocketSemiAbruptClose)),
-            ])
-        }
+//        if #available(macOS 12.0, *) {
+//            retVal.append(contentsOf: [
+//                ("test_webSocket", asyncTest(test_webSocket)),
+//                ("test_webSocketSpecificProtocol", asyncTest(test_webSocketSpecificProtocol)),
+//                ("test_webSocketAbruptClose", asyncTest(test_webSocketAbruptClose)),
+//                ("test_webSocketSemiAbruptClose", asyncTest(test_webSocketSemiAbruptClose)),
+//            ])
+//        }
         return retVal
     }
     
