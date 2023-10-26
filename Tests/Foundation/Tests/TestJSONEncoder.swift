@@ -999,6 +999,62 @@ class TestJSONEncoder : XCTestCase {
         XCTAssertEqual(result.dict.count, 0)
     }
 
+    func test_decodingWithSuperclassSpecialization() throws {
+        class Animal: Codable {
+            let name: String
+            init(name: String) {
+                self.name = name
+            }
+        }
+        class Cat: Animal {
+            let isDomestic: Bool
+            private enum CodingKeys: String, CodingKey {
+                case isDomestic
+            }
+            init(name: String, isDomestic: Bool) {
+                self.isDomestic = isDomestic
+                super.init(name: name)
+            }
+            required init(from decoder: Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                isDomestic = try container.decode(Bool.self, forKey: .isDomestic)
+                try super.init(from: container.superDecoder())
+            }
+            override func encode(to encoder: Encoder) throws {
+                var container = encoder.container(keyedBy: CodingKeys.self)
+                try container.encode(isDomestic, forKey: .isDomestic)
+                try super.encode(to: container.superEncoder())
+            }
+        }
+
+        let myCat = Cat(name: "Maru", isDomestic: true)
+        let myPet: Animal = myCat
+        let petData: Data
+        do {
+            petData = try JSONEncoder().encode(myPet)
+        }
+        catch {
+            XCTFail("Failed to encode the object: \(error)")
+            return
+        }
+
+        let decodedPet: Animal
+        do {
+            decodedPet = try JSONDecoder().decode(type(of: myPet), from: petData)
+        }
+        catch {
+            XCTFail("Failed to decode the object: \(error)")
+            return
+        }
+
+        guard let decodedCat = decodedPet as? Cat else {
+            XCTFail("The decoded animal is not a cat")
+            return
+        }
+        XCTAssertEqual(decodedCat.isDomestic, myCat.isDomestic)
+        XCTAssertEqual(decodedCat.name, myCat.name)
+    }
+
     // MARK: - Helper Functions
     private var _jsonEmptyDictionary: Data {
         return "{}".data(using: .utf8)!
@@ -1605,6 +1661,7 @@ extension TestJSONEncoder {
             ("test_dictionary_snake_case_encoding", test_dictionary_snake_case_encoding),
             ("test_OutputFormattingValues", test_OutputFormattingValues),
             ("test_SR17581_codingEmptyDictionaryWithNonstringKeyDoesRoundtrip", test_SR17581_codingEmptyDictionaryWithNonstringKeyDoesRoundtrip),
+            ("test_decodingWithSuperclassSpecialization", test_decodingWithSuperclassSpecialization),
         ]
     }
 }
