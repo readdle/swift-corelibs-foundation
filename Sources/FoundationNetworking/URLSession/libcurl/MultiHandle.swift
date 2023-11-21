@@ -461,13 +461,19 @@ fileprivate class _SocketSources {
     }
 
     deinit {
-        readSource = nil
-        writeSource = nil
         if let readDupSocket = readDupSocket {
-            close(readDupSocket)
+            let cancelWorkItem = DispatchWorkItem(block: {
+                close(readDupSocket)
+            })
+            readSource?.setCancelHandler(handler: cancelWorkItem)
+            readSource?.cancel()
         }
         if let writeDupSocket = writeDupSocket {
-            close(writeDupSocket)
+            let cancelWorkItem = DispatchWorkItem(block: {
+                close(writeDupSocket)
+            })
+            writeSource?.setCancelHandler(handler: cancelWorkItem)
+            writeSource?.cancel()
         }
     }
 
