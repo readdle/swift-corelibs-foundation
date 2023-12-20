@@ -1947,20 +1947,21 @@ class TestURLSession: LoopbackServerTest {
         
         let data = Data((0 ..< 131076).map { _ in UInt8.random(in: UInt8.min ... UInt8.max) })
         var req = URLRequest(url: URL(string: "http://httpbin.org/post")!)
+//        var req = URLRequest(url: URL(string: "http://127.0.0.1:\(TestURLSession.serverPort)/POST")!)
         req.httpMethod = "POST"
         req.httpBody = data
-        //req.httpBodyStream = InputStream(data: data)
         
-        var semaphore = DispatchSemaphore(value: 0)
-        dataTask = session.dataTask(with: req) { data, response, error in
-            NSLog("Data task response with error \(String(describing: error))")
-            semaphore.signal()
+        let e = expectation(description: "POST completed")
+        dataTask = session.uploadTask(with: req, from: data) { data, response, error in
+            print("-- POST Completed, \(error)")
+            e.fulfill()
         }
         dataTask?.resume()
-        NSLog("Data task resume \(data.count)")
-        semaphore.wait()
+        print("-- data task resumed")
         
-        semaphore = DispatchSemaphore(value: 0)
+        waitForExpectations(timeout: 5)
+        
+        var semaphore = DispatchSemaphore(value: 0)
         dataTask = session.dataTask(with: req) { data, response, error in
             NSLog("Data task response with error \(String(describing: error))")
             semaphore.signal()

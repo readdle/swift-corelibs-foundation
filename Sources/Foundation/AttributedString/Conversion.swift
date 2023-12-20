@@ -311,17 +311,17 @@ fileprivate func _loadScopeAttributes(forSymbol symbol: String, from path: Strin
 @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
 fileprivate func _loadAttributeTypes(from scope: Any.Type) -> [String : Any.Type] {
     var result = [String : Any.Type]()
-    _forEachField(of: scope, options: [.ignoreUnknown]) { pointer, offset, type, kind -> Bool in
-        func project<K>(_: K.Type) {
-            if let key = GetNameIfAttribute(K.self).attemptAction() {
-                result[key] = type
-            } else if let subResults = GetAllAttributeTypesIfAttributeScope(K.self).attemptAction() {
-                result.merge(subResults, uniquingKeysWith: { current, new in new })
-            }
-        }
-        _openExistential(type, do: project)
-        return true
-    }
+//    _forEachField(of: scope, options: [.ignoreUnknown]) { pointer, offset, type, kind -> Bool in
+//        func project<K>(_: K.Type) {
+//            if let key = GetNameIfAttribute(K.self).attemptAction() {
+//                result[key] = type
+//            } else if let subResults = GetAllAttributeTypesIfAttributeScope(K.self).attemptAction() {
+//                result.merge(subResults, uniquingKeysWith: { current, new in new })
+//            }
+//        }
+//        _openExistential(type, do: project)
+//        return true
+//    }
     return result
 }
 

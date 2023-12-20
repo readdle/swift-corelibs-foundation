@@ -95,6 +95,7 @@ class TestNSLock: XCTestCase {
             arrayLock.lock()
             totalThreads = threadsStarted.filter {$0 == true }.count
             arrayLock.unlock()
+            Thread.sleep(forTimeInterval: 0.1)
         } while totalThreads < threadCount
         XCTAssertEqual(totalThreads, threadCount)
 
@@ -107,6 +108,7 @@ class TestNSLock: XCTestCase {
             arrayLock.lock()
             totalThreads = threadsStarted.filter {$0 == false }.count
             arrayLock.unlock()
+            Thread.sleep(forTimeInterval: 0.1)
         } while totalThreads < threadCount
         XCTAssertEqual(totalThreads, threadCount)
 
