@@ -418,7 +418,7 @@ internal class _HTTPURLProtocol: _NativeProtocol {
             guard let self = self, let task = self.task else {
                 fatalError("Timeout on a task that doesn't exist")
             } //this guard must always pass
-
+            print("-- Timeout timer fired")
             // If a timeout occurred while waiting for a redirect completion handler to be called by
             // the delegate then terminate the task but DONT set the error to NSURLErrorTimedOut.
             // This matches Darwin.

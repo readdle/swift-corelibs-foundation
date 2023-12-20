@@ -479,7 +479,7 @@ class TestURLSession: LoopbackServerTest {
         waitForExpectations(timeout: 30)
     }
     
-    func test_taskTimeout() {
+    func test_taskTimeout() throws {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 5
         let urlString = "http://127.0.0.1:\(TestURLSession.serverPort)/Peru"
