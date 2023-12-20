@@ -1938,6 +1938,75 @@ class TestURLSession: LoopbackServerTest {
         }
     }
     
+    func test_post64Kb() throws {
+        // setenv("URLSessionDebug", "true", 1)
+        // setenv("URLSessionDebugLibcurl", "true", 1)
+        
+        let session = URLSession(configuration: URLSessionConfiguration.default)
+        var dataTask: URLSessionDataTask? = nil
+        
+        let data = Data((0 ..< 131076).map { _ in UInt8.random(in: UInt8.min ... UInt8.max) })
+        var req = URLRequest(url: URL(string: "http://httpbin.org/post")!)
+        req.httpMethod = "POST"
+        req.httpBody = data
+        //req.httpBodyStream = InputStream(data: data)
+        
+        var semaphore = DispatchSemaphore(value: 0)
+        dataTask = session.dataTask(with: req) { data, response, error in
+            NSLog("Data task response with error \(String(describing: error))")
+            semaphore.signal()
+        }
+        dataTask?.resume()
+        NSLog("Data task resume \(data.count)")
+        semaphore.wait()
+        
+        semaphore = DispatchSemaphore(value: 0)
+        dataTask = session.dataTask(with: req) { data, response, error in
+            NSLog("Data task response with error \(String(describing: error))")
+            semaphore.signal()
+        }
+        dataTask?.resume()
+        NSLog("Data task resume \(data.count)")
+        semaphore.wait()
+        
+        semaphore = DispatchSemaphore(value: 0)
+        dataTask = session.dataTask(with: req) { data, response, error in
+            NSLog("Data task response with error \(String(describing: error))")
+            semaphore.signal()
+        }
+        dataTask?.resume()
+        NSLog("Data task resume \(data.count)")
+        semaphore.wait()
+        
+        semaphore = DispatchSemaphore(value: 0)
+        dataTask = session.dataTask(with: req) { data, response, error in
+            NSLog("Data task response with error \(String(describing: error))")
+            semaphore.signal()
+        }
+        dataTask?.resume()
+        NSLog("Data task resume \(data.count)")
+        semaphore.wait()
+        
+        semaphore = DispatchSemaphore(value: 0)
+        dataTask = session.dataTask(with: req) { data, response, error in
+            NSLog("Data task response with error \(String(describing: error))")
+            semaphore.signal()
+        }
+        dataTask?.resume()
+        NSLog("Data task resume \(data.count)")
+        semaphore.wait()
+        
+        
+        semaphore = DispatchSemaphore(value: 0)
+        dataTask = session.dataTask(with: req) { data, response, error in
+            NSLog("Data task response with error \(String(describing: error))")
+            semaphore.signal()
+        }
+        dataTask?.resume()
+        NSLog("Data task resume \(data.count)")
+        semaphore.wait()
+    }
+    
 #if NS_FOUNDATION_ALLOWS_TESTABLE_IMPORT
     func test_webSocket() async throws {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
@@ -2107,99 +2176,100 @@ class TestURLSession: LoopbackServerTest {
 #endif
   
     static var allTests: [(String, (TestURLSession) -> () throws -> Void)] {
-        var retVal = [
-            ("test_dataTaskWithURL", test_dataTaskWithURL),
-            ("test_dataTaskWithURLRequest", test_dataTaskWithURLRequest),
-            ("test_dataTaskWithURLCompletionHandler", test_dataTaskWithURLCompletionHandler),
-            ("test_dataTaskWithURLRequestCompletionHandler", test_dataTaskWithURLRequestCompletionHandler),
-            /* ⚠️ */ ("test_dataTaskWithHttpInputStream", testExpectedToFail(test_dataTaskWithHttpInputStream, "Flaky test")),
-            ("test_dataTaskWithHTTPBodyRedirect", test_dataTaskWithHTTPBodyRedirect),
-            ("test_gzippedDataTask", test_gzippedDataTask),
-            ("test_downloadTaskWithURL", test_downloadTaskWithURL),
-            ("test_downloadTaskWithURLRequest", test_downloadTaskWithURLRequest),
-            ("test_downloadTaskWithRequestAndHandler", test_downloadTaskWithRequestAndHandler),
-            ("test_downloadTaskWithURLAndHandler", test_downloadTaskWithURLAndHandler),
-            ("test_gzippedDownloadTask", test_gzippedDownloadTask),
-            ("test_finishTaskAndInvalidate", test_finishTasksAndInvalidate),
-            ("test_taskError", test_taskError),
-            ("test_taskCopy", test_taskCopy),
-            ("test_cancelTask", test_cancelTask),
-            ("test_unhandledURLProtocol", test_unhandledURLProtocol),
-            ("test_requestToNilURL", test_requestToNilURL),
-            /* ⚠️ */ ("test_suspendResumeTask", testExpectedToFail(test_suspendResumeTask, "Occasionally breaks")),
-            ("test_taskTimeout", test_taskTimeout),
-            ("test_verifyRequestHeaders", test_verifyRequestHeaders),
-            ("test_verifyHttpAdditionalHeaders", test_verifyHttpAdditionalHeaders),
-            ("test_httpRedirectionWithCode300", test_httpRedirectionWithCode300),
-            ("test_httpRedirectionWithCode301_302", test_httpRedirectionWithCode301_302),
-            ("test_httpRedirectionWithCode303", test_httpRedirectionWithCode303),
-            ("test_httpRedirectionWithCode304", test_httpRedirectionWithCode304),
-            ("test_httpRedirectionWithCode305_308", test_httpRedirectionWithCode305_308),
-            ("test_httpRedirectDontFollowUsingNil", test_httpRedirectDontFollowUsingNil),
-            ("test_httpRedirectDontFollowIgnoringHandler", test_httpRedirectDontFollowIgnoringHandler),
-            ("test_httpRedirectionWithCompleteRelativePath", test_httpRedirectionWithCompleteRelativePath),
-            ("test_httpRedirectionWithInCompleteRelativePath", test_httpRedirectionWithInCompleteRelativePath),
-            ("test_httpRedirectionWithDefaultPort", test_httpRedirectionWithDefaultPort),
-            ("test_httpRedirectionWithEncodedQuery", test_httpRedirectionWithEncodedQuery),
-            ("test_httpRedirectionTimeout", test_httpRedirectionTimeout),
-            /* ⚠️ */ ("test_httpRedirectionChainInheritsTimeoutInterval", testExpectedToFail(test_httpRedirectionChainInheritsTimeoutInterval, "Flaky on Linux CI: https://bugs.swift.org/browse/SR-14433")),
-            /* ⚠️ */ ("test_httpRedirectionExceededMaxRedirects", testExpectedToFail(test_httpRedirectionExceededMaxRedirects, "Flaky on Linux CI: https://bugs.swift.org/browse/SR-14433")),
-            ("test_willPerformRedirect", test_willPerformRedirect),
-            ("test_httpNotFound", test_httpNotFound),
-            /* ⚠️ */ ("test_http0_9SimpleResponses", testExpectedToFail(test_http0_9SimpleResponses, "Breaks on Ubunut20.04")),
-            ("test_outOfRangeButCorrectlyFormattedHTTPCode", test_outOfRangeButCorrectlyFormattedHTTPCode),
-            ("test_missingContentLengthButStillABody", test_missingContentLengthButStillABody),
-            ("test_illegalHTTPServerResponses", test_illegalHTTPServerResponses),
-            ("test_dataTaskWithSharedDelegate", test_dataTaskWithSharedDelegate),
-            ("test_simpleUploadWithDelegate", test_simpleUploadWithDelegate),
-            ("test_requestWithEmptyBody", test_requestWithEmptyBody),
-            /* ⚠️ */ ("test_requestWithNonEmptyBody", testExpectedToFail(test_requestWithNonEmptyBody, "Started failing for no readily available reason.")),
-            /* ⚠️ */ ("test_concurrentRequests", testExpectedToFail(test_concurrentRequests, "Intermittent SEGFAULT: rdar://84519512")),
-            ("test_disableCookiesStorage", test_disableCookiesStorage),
-            ("test_cookiesStorage", test_cookiesStorage),
-            ("test_cookieStorageForEphemeralConfiguration", test_cookieStorageForEphemeralConfiguration),
-            ("test_previouslySetCookiesAreSentInLaterRequests", test_previouslySetCookiesAreSentInLaterRequests),
-            ("test_setCookieHeadersCanBeIgnored", test_setCookieHeadersCanBeIgnored),
-            ("test_initURLSessionConfiguration", test_initURLSessionConfiguration),
-            ("test_basicAuthRequest", test_basicAuthRequest),
-            ("test_redirectionWithSetCookies", test_redirectionWithSetCookies),
-            ("test_postWithEmptyBody", test_postWithEmptyBody),
-            ("test_basicAuthWithUnauthorizedHeader", test_basicAuthWithUnauthorizedHeader),
-            ("test_checkErrorTypeAfterInvalidateAndCancel", test_checkErrorTypeAfterInvalidateAndCancel),
-            ("test_taskCountAfterInvalidateAndCancel", test_taskCountAfterInvalidateAndCancel),
-            ("test_sessionDelegateAfterInvalidateAndCancel", test_sessionDelegateAfterInvalidateAndCancel),
-            /* ⚠️ */ ("test_getAllTasks", testExpectedToFail(test_getAllTasks, "This test causes later ones to crash")),
-            /* ⚠️ */ ("test_getTasksWithCompletion", testExpectedToFail(test_getTasksWithCompletion, "Flaky tests")),
-            /* ⚠️ */ ("test_invalidResumeDataForDownloadTask",
-            /* ⚠️ */   testExpectedToFail(test_invalidResumeDataForDownloadTask, "This test crashes nondeterministically: https://bugs.swift.org/browse/SR-11353")),
-            /* ⚠️ */ ("test_simpleUploadWithDelegateProvidingInputStream",
-            /* ⚠️ */   testExpectedToFail(test_simpleUploadWithDelegateProvidingInputStream, "This test times out frequently: https://bugs.swift.org/browse/SR-11343")),
-            /* ⚠️ */ ("test_noDoubleCallbackWhenCancellingAndProtocolFailsFast",
-            /* ⚠️ */      testExpectedToFail(test_noDoubleCallbackWhenCancellingAndProtocolFailsFast, "This test crashes nondeterministically: https://bugs.swift.org/browse/SR-11310")),
-            /* ⚠️ */ ("test_cancelledTasksCannotBeResumed", testExpectedToFail(test_cancelledTasksCannotBeResumed, "Breaks on Ubuntu 18.04")),
+        var retVal: [(String, (TestURLSession) -> () throws -> Void)] = [
+            ("test_post64Kb", test_post64Kb),
+//            ("test_dataTaskWithURL", test_dataTaskWithURL),
+//            ("test_dataTaskWithURLRequest", test_dataTaskWithURLRequest),
+//            ("test_dataTaskWithURLCompletionHandler", test_dataTaskWithURLCompletionHandler),
+//            ("test_dataTaskWithURLRequestCompletionHandler", test_dataTaskWithURLRequestCompletionHandler),
+//            /* ⚠️ */ ("test_dataTaskWithHttpInputStream", testExpectedToFail(test_dataTaskWithHttpInputStream, "Flaky test")),
+//            ("test_dataTaskWithHTTPBodyRedirect", test_dataTaskWithHTTPBodyRedirect),
+//            ("test_gzippedDataTask", test_gzippedDataTask),
+//            ("test_downloadTaskWithURL", test_downloadTaskWithURL),
+//            ("test_downloadTaskWithURLRequest", test_downloadTaskWithURLRequest),
+//            ("test_downloadTaskWithRequestAndHandler", test_downloadTaskWithRequestAndHandler),
+//            ("test_downloadTaskWithURLAndHandler", test_downloadTaskWithURLAndHandler),
+//            ("test_gzippedDownloadTask", test_gzippedDownloadTask),
+//            ("test_finishTaskAndInvalidate", test_finishTasksAndInvalidate),
+//            ("test_taskError", test_taskError),
+//            ("test_taskCopy", test_taskCopy),
+//            ("test_cancelTask", test_cancelTask),
+//            ("test_unhandledURLProtocol", test_unhandledURLProtocol),
+//            ("test_requestToNilURL", test_requestToNilURL),
+//            /* ⚠️ */ ("test_suspendResumeTask", testExpectedToFail(test_suspendResumeTask, "Occasionally breaks")),
+//            ("test_taskTimeout", test_taskTimeout),
+//            ("test_verifyRequestHeaders", test_verifyRequestHeaders),
+//            ("test_verifyHttpAdditionalHeaders", test_verifyHttpAdditionalHeaders),
+//            ("test_httpRedirectionWithCode300", test_httpRedirectionWithCode300),
+//            ("test_httpRedirectionWithCode301_302", test_httpRedirectionWithCode301_302),
+//            ("test_httpRedirectionWithCode303", test_httpRedirectionWithCode303),
+//            ("test_httpRedirectionWithCode304", test_httpRedirectionWithCode304),
+//            ("test_httpRedirectionWithCode305_308", test_httpRedirectionWithCode305_308),
+//            ("test_httpRedirectDontFollowUsingNil", test_httpRedirectDontFollowUsingNil),
+//            ("test_httpRedirectDontFollowIgnoringHandler", test_httpRedirectDontFollowIgnoringHandler),
+//            ("test_httpRedirectionWithCompleteRelativePath", test_httpRedirectionWithCompleteRelativePath),
+//            ("test_httpRedirectionWithInCompleteRelativePath", test_httpRedirectionWithInCompleteRelativePath),
+//            ("test_httpRedirectionWithDefaultPort", test_httpRedirectionWithDefaultPort),
+//            ("test_httpRedirectionWithEncodedQuery", test_httpRedirectionWithEncodedQuery),
+//            ("test_httpRedirectionTimeout", test_httpRedirectionTimeout),
+//            /* ⚠️ */ ("test_httpRedirectionChainInheritsTimeoutInterval", testExpectedToFail(test_httpRedirectionChainInheritsTimeoutInterval, "Flaky on Linux CI: https://bugs.swift.org/browse/SR-14433")),
+//            /* ⚠️ */ ("test_httpRedirectionExceededMaxRedirects", testExpectedToFail(test_httpRedirectionExceededMaxRedirects, "Flaky on Linux CI: https://bugs.swift.org/browse/SR-14433")),
+//            ("test_willPerformRedirect", test_willPerformRedirect),
+//            ("test_httpNotFound", test_httpNotFound),
+//            /* ⚠️ */ ("test_http0_9SimpleResponses", testExpectedToFail(test_http0_9SimpleResponses, "Breaks on Ubunut20.04")),
+//            ("test_outOfRangeButCorrectlyFormattedHTTPCode", test_outOfRangeButCorrectlyFormattedHTTPCode),
+//            ("test_missingContentLengthButStillABody", test_missingContentLengthButStillABody),
+//            ("test_illegalHTTPServerResponses", test_illegalHTTPServerResponses),
+//            ("test_dataTaskWithSharedDelegate", test_dataTaskWithSharedDelegate),
+//            ("test_simpleUploadWithDelegate", test_simpleUploadWithDelegate),
+//            ("test_requestWithEmptyBody", test_requestWithEmptyBody),
+//            /* ⚠️ */ ("test_requestWithNonEmptyBody", testExpectedToFail(test_requestWithNonEmptyBody, "Started failing for no readily available reason.")),
+//            /* ⚠️ */ ("test_concurrentRequests", testExpectedToFail(test_concurrentRequests, "Intermittent SEGFAULT: rdar://84519512")),
+//            ("test_disableCookiesStorage", test_disableCookiesStorage),
+//            ("test_cookiesStorage", test_cookiesStorage),
+//            ("test_cookieStorageForEphemeralConfiguration", test_cookieStorageForEphemeralConfiguration),
+//            ("test_previouslySetCookiesAreSentInLaterRequests", test_previouslySetCookiesAreSentInLaterRequests),
+//            ("test_setCookieHeadersCanBeIgnored", test_setCookieHeadersCanBeIgnored),
+//            ("test_initURLSessionConfiguration", test_initURLSessionConfiguration),
+//            ("test_basicAuthRequest", test_basicAuthRequest),
+//            ("test_redirectionWithSetCookies", test_redirectionWithSetCookies),
+//            ("test_postWithEmptyBody", test_postWithEmptyBody),
+//            ("test_basicAuthWithUnauthorizedHeader", test_basicAuthWithUnauthorizedHeader),
+//            ("test_checkErrorTypeAfterInvalidateAndCancel", test_checkErrorTypeAfterInvalidateAndCancel),
+//            ("test_taskCountAfterInvalidateAndCancel", test_taskCountAfterInvalidateAndCancel),
+//            ("test_sessionDelegateAfterInvalidateAndCancel", test_sessionDelegateAfterInvalidateAndCancel),
+//            /* ⚠️ */ ("test_getAllTasks", testExpectedToFail(test_getAllTasks, "This test causes later ones to crash")),
+//            /* ⚠️ */ ("test_getTasksWithCompletion", testExpectedToFail(test_getTasksWithCompletion, "Flaky tests")),
+//            /* ⚠️ */ ("test_invalidResumeDataForDownloadTask",
+//            /* ⚠️ */   testExpectedToFail(test_invalidResumeDataForDownloadTask, "This test crashes nondeterministically: https://bugs.swift.org/browse/SR-11353")),
+//            /* ⚠️ */ ("test_simpleUploadWithDelegateProvidingInputStream",
+//            /* ⚠️ */   testExpectedToFail(test_simpleUploadWithDelegateProvidingInputStream, "This test times out frequently: https://bugs.swift.org/browse/SR-11343")),
+//            /* ⚠️ */ ("test_noDoubleCallbackWhenCancellingAndProtocolFailsFast",
+//            /* ⚠️ */      testExpectedToFail(test_noDoubleCallbackWhenCancellingAndProtocolFailsFast, "This test crashes nondeterministically: https://bugs.swift.org/browse/SR-11310")),
+//            /* ⚠️ */ ("test_cancelledTasksCannotBeResumed", testExpectedToFail(test_cancelledTasksCannotBeResumed, "Breaks on Ubuntu 18.04")),
         ]
-        #if NS_FOUNDATION_ALLOWS_TESTABLE_IMPORT
-        if #available(macOS 12.0, *) {
-            retVal.append(contentsOf: [
-                ("test_webSocket", asyncTest(test_webSocket)),
-                ("test_webSocketSpecificProtocol", asyncTest(test_webSocketSpecificProtocol)),
-                ("test_webSocketAbruptClose", asyncTest(test_webSocketAbruptClose)),
-                ("test_webSocketSemiAbruptClose", asyncTest(test_webSocketSemiAbruptClose)),
-            ])
-        }
-        #endif
-        #if os(Windows)
-            retVal.append(contentsOf: [
-                ("test_httpTimeout", testExpectedToFail(test_httpTimeout, "Crashes: https://github.com/apple/swift-corelibs-foundation/issues/4791")),
-                ("test_connectTimeout", testExpectedToFail(test_connectTimeout, "Crashes: https://github.com/apple/swift-corelibs-foundation/issues/4791")),
-                ("test_repeatedRequestsStress", testExpectedToFail(test_repeatedRequestsStress, "Crashes: https://github.com/apple/swift-corelibs-foundation/issues/4791")),
-            ])
-        #else
-        retVal.append(contentsOf: [
-            ("test_httpTimeout", test_httpTimeout),
-            ("test_connectTimeout", test_connectTimeout),
-        ])
-        #endif
+//        #if NS_FOUNDATION_ALLOWS_TESTABLE_IMPORT
+//        if #available(macOS 12.0, *) {
+//            retVal.append(contentsOf: [
+//                ("test_webSocket", asyncTest(test_webSocket)),
+//                ("test_webSocketSpecificProtocol", asyncTest(test_webSocketSpecificProtocol)),
+//                ("test_webSocketAbruptClose", asyncTest(test_webSocketAbruptClose)),
+//                ("test_webSocketSemiAbruptClose", asyncTest(test_webSocketSemiAbruptClose)),
+//            ])
+//        }
+//        #endif
+//        #if os(Windows)
+//            retVal.append(contentsOf: [
+//                ("test_httpTimeout", testExpectedToFail(test_httpTimeout, "Crashes: https://github.com/apple/swift-corelibs-foundation/issues/4791")),
+//                ("test_connectTimeout", testExpectedToFail(test_connectTimeout, "Crashes: https://github.com/apple/swift-corelibs-foundation/issues/4791")),
+//                ("test_repeatedRequestsStress", testExpectedToFail(test_repeatedRequestsStress, "Crashes: https://github.com/apple/swift-corelibs-foundation/issues/4791")),
+//            ])
+//        #else
+//        retVal.append(contentsOf: [
+//            ("test_httpTimeout", test_httpTimeout),
+//            ("test_connectTimeout", test_connectTimeout),
+//        ])
+//        #endif
         return retVal
     }
     
