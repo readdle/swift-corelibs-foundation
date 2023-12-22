@@ -537,7 +537,14 @@ fileprivate extension _EasyHandle {
             }
             return handle.fill(writeBuffer: data, size: size, nmemb: nmemb)
         }.asError()
-         
+        
+        // close
+        try! CFURLSession_easy_setopt_ptr(rawHandle, CFURLSessionOptionCLOSESOCKETDATA, UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())).asError()
+        try! CFURLSession_easy_setopt_scl(rawHandle, CFURLSessionOptionCLOSESOCKETFUNCTION) {  (clientp: UnsafeMutableRawPointer?, item: CFURLSession_socket_t) in
+            // TODO schedule close
+            return 0
+        }.asError()
+                
         // header
         try! CFURLSession_easy_setopt_ptr(rawHandle, CFURLSessionOptionHEADERDATA, UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())).asError()
         try! CFURLSession_easy_setopt_wc(rawHandle, CFURLSessionOptionHEADERFUNCTION) { (data: UnsafeMutablePointer<Int8>, size: Int, nmemb: Int, userdata: UnsafeMutableRawPointer?) -> Int in
