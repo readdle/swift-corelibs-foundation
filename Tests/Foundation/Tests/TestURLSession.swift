@@ -33,12 +33,17 @@ class TestURLSession: LoopbackServerTest {
     func test_dataTaskWithURLCompletionHandler() {
         //shared session
         dataTaskWithURLCompletionHandler(with: URLSession.shared)
-
+        Thread.sleep(forTimeInterval: 5.0)
+//        dataTaskWithURLCompletionHandler(with: URLSession.shared)
+        
+        print("-- NEW SESSION --")
         //new session
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 8
         let session = URLSession(configuration: config, delegate: nil, delegateQueue: nil)
         dataTaskWithURLCompletionHandler(with: session)
+        
+        Thread.sleep(forTimeInterval: 5.0)
     }
 
     func dataTaskWithURLCompletionHandler(with session: URLSession) {
@@ -553,6 +558,8 @@ class TestURLSession: LoopbackServerTest {
     }
     
     func test_repeatedRequestsStress() throws {
+        // TODO: try disabling curl connection cache to force socket close early. Or create several url sessions (they have cleanup in deinit)
+        
         let config = URLSessionConfiguration.default
         let urlString = "http://127.0.0.1:\(TestURLSession.serverPort)/Peru"
         let session = URLSession(configuration: config, delegate: nil, delegateQueue: nil)
@@ -2178,10 +2185,10 @@ class TestURLSession: LoopbackServerTest {
   
     static var allTests: [(String, (TestURLSession) -> () throws -> Void)] {
         var retVal: [(String, (TestURLSession) -> () throws -> Void)] = [
-            ("test_post64Kb", test_post64Kb),
+//            ("test_post64Kb", test_post64Kb),
 //            ("test_dataTaskWithURL", test_dataTaskWithURL),
 //            ("test_dataTaskWithURLRequest", test_dataTaskWithURLRequest),
-//            ("test_dataTaskWithURLCompletionHandler", test_dataTaskWithURLCompletionHandler),
+            ("test_dataTaskWithURLCompletionHandler", test_dataTaskWithURLCompletionHandler),
 //            ("test_dataTaskWithURLRequestCompletionHandler", test_dataTaskWithURLRequestCompletionHandler),
 //            /* ⚠️ */ ("test_dataTaskWithHttpInputStream", testExpectedToFail(test_dataTaskWithHttpInputStream, "Flaky test")),
 //            ("test_dataTaskWithHTTPBodyRedirect", test_dataTaskWithHTTPBodyRedirect),

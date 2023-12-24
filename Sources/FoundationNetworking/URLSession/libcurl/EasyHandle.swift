@@ -72,6 +72,7 @@ internal final class _EasyHandle {
         setupCallbacks()
     }
     deinit {
+        print("-- 💀 deinit, handle \(rawHandle)")
         CFURLSessionEasyHandleDeinit(rawHandle)
     }
 }
@@ -522,6 +523,7 @@ fileprivate extension _EasyHandle {
         
         try! CFURLSession_easy_setopt_wc(rawHandle, CFURLSessionOptionWRITEFUNCTION) { (data: UnsafeMutablePointer<Int8>, size: Int, nmemb: Int, userdata: UnsafeMutableRawPointer?) -> Int in
             guard let handle = _EasyHandle.from(callbackUserData: userdata) else { return 0 }
+            print("-- ⬇️ receive: handle \(handle.rawHandle), size \(size), nmemb \(nmemb)")
             defer {
                 handle.resetTimer()
             }
@@ -532,6 +534,7 @@ fileprivate extension _EasyHandle {
         try! CFURLSession_easy_setopt_ptr(rawHandle, CFURLSessionOptionREADDATA, UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())).asError()
         try! CFURLSession_easy_setopt_wc(rawHandle, CFURLSessionOptionREADFUNCTION) { (data: UnsafeMutablePointer<Int8>, size: Int, nmemb: Int, userdata: UnsafeMutableRawPointer?) -> Int in
             guard let handle = _EasyHandle.from(callbackUserData: userdata) else { return 0 }
+            print("-- ⬆️ send: handle \(handle.rawHandle), size \(size), nmemb \(nmemb)")
             defer {
                 handle.resetTimer()
             }
@@ -539,9 +542,11 @@ fileprivate extension _EasyHandle {
         }.asError()
         
         // close
+        print("-- ⚙️ setting option: handle \(rawHandle)")
         try! CFURLSession_easy_setopt_ptr(rawHandle, CFURLSessionOptionCLOSESOCKETDATA, UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())).asError()
         try! CFURLSession_easy_setopt_scl(rawHandle, CFURLSessionOptionCLOSESOCKETFUNCTION) {  (clientp: UnsafeMutableRawPointer?, item: CFURLSession_socket_t) in
-            // TODO schedule close
+//            guard let handle = _EasyHandle.from(callbackUserData: clientp) else { fatalError() }
+            print("-- 🛑 requested close: socket \(item)")
             return 0
         }.asError()
                 
@@ -557,18 +562,18 @@ fileprivate extension _EasyHandle {
             return handle.didReceive(headerData: data, size: size, nmemb: nmemb, contentLength: length)
         }.asError()
 
-        // socket options
-        try! CFURLSession_easy_setopt_ptr(rawHandle, CFURLSessionOptionSOCKOPTDATA, UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())).asError()
-        try! CFURLSession_easy_setopt_sc(rawHandle, CFURLSessionOptionSOCKOPTFUNCTION) { (userdata: UnsafeMutableRawPointer?, fd: CInt, type: CFURLSessionSocketType) -> CInt in
-            guard let handle = _EasyHandle.from(callbackUserData: userdata) else { return 0 }
-            guard type == CFURLSessionSocketTypeIPCXN else { return 0 }
-            do {
-                try handle.setSocketOptions(for: fd)
-                return 0
-            } catch {
-                return 1
-            }
-        }.asError()
+//        // socket options
+//        try! CFURLSession_easy_setopt_ptr(rawHandle, CFURLSessionOptionSOCKOPTDATA, UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())).asError()
+//        try! CFURLSession_easy_setopt_sc(rawHandle, CFURLSessionOptionSOCKOPTFUNCTION) { (userdata: UnsafeMutableRawPointer?, fd: CInt, type: CFURLSessionSocketType) -> CInt in
+//            guard let handle = _EasyHandle.from(callbackUserData: userdata) else { return 0 }
+//            guard type == CFURLSessionSocketTypeIPCXN else { return 0 }
+//            do {
+//                try handle.setSocketOptions(for: fd)
+//                return 0
+//            } catch {
+//                return 1
+//            }
+//        }.asError()
         // seeking in input stream
         try! CFURLSession_easy_setopt_ptr(rawHandle, CFURLSessionOptionSEEKDATA, UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())).asError()
         try! CFURLSession_easy_setopt_seek(rawHandle, CFURLSessionOptionSEEKFUNCTION, { (userdata, offset, origin) -> Int32 in

@@ -55,10 +55,12 @@ extension URLSession {
         }
         deinit {
             // C.f.: <https://curl.haxx.se/libcurl/c/curl_multi_cleanup.html>
+            print("-- 💀 multi deinit begin")
             easyHandles.forEach {
                 try! CFURLSessionMultiHandleRemoveHandle(rawHandle, $0.rawHandle).asError()
             }
             try! CFURLSessionMultiHandleDeinit(rawHandle).asError()
+            print("-- 💀 multi deinit end")
         }
     }
 }
@@ -122,11 +124,13 @@ fileprivate extension URLSession._MultiHandle {
             let p = Unmanaged.passRetained(s).toOpaque()
             CFURLSessionMultiHandleAssign(rawHandle, socket, UnsafeMutableRawPointer(p))
             socketSources = s
+            print("-- ➕ register: socket \(socket), handle \(easyHandle), sources \(Unmanaged.passUnretained(s).toOpaque())")
         } else if socketSources != nil && action == .unregister {
             // We need to release the stored pointer:
             if let opaque = socketSourcePtr {
                 Unmanaged<_SocketSources>.fromOpaque(opaque).release()
             }
+            print("-- ➖ unregister: socket \(socket), handle \(easyHandle), sources \(socketSourcePtr!)")
             socketSources = nil
         }
         if let ss = socketSources {
@@ -182,6 +186,7 @@ internal extension URLSession._MultiHandle {
         guard let idx = self.easyHandles.firstIndex(of: handle) else {
             fatalError("Handle not in list.")
         }
+        print("-- ❌ remove, handle \(handle.rawHandle)")
         self.easyHandles.remove(at: idx)
         try! CFURLSessionMultiHandleRemoveHandle(self.rawHandle, handle.rawHandle).asError()
     }
@@ -426,6 +431,7 @@ fileprivate class _SocketSources {
 
     func createReadSource(socket: CFURLSession_socket_t, queue: DispatchQueue, handler: DispatchWorkItem) {
         guard readSource == nil else { return }
+        print("-- 👓 creating read source, socket \(socket)")
 #if os(Windows)
         let s = DispatchSource.makeReadSource(handle: HANDLE(bitPattern: Int(socket))!, queue: queue)
 #else
@@ -438,6 +444,7 @@ fileprivate class _SocketSources {
 
     func createWriteSource(socket: CFURLSession_socket_t, queue: DispatchQueue, handler: DispatchWorkItem) {
         guard writeSource == nil else { return }
+        print("-- ✍️ creating write source, socket \(socket)")
 #if os(Windows)
         let s = DispatchSource.makeWriteSource(handle: HANDLE(bitPattern: Int(socket))!, queue: queue)
 #else
