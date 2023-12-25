@@ -45,6 +45,7 @@ extension URLSession {
         let queue: DispatchQueue
         let group = DispatchGroup()
         fileprivate var easyHandles: [_EasyHandle] = []
+        fileprivate var socketReferences: [CFURLSession_socket_t: _SocketReference] = [:]
         fileprivate var timeoutSource: _TimeoutSource? = nil
         private var reentrantInUpdateTimeoutTimer = false
         
@@ -131,6 +132,11 @@ fileprivate extension URLSession._MultiHandle {
                 Unmanaged<_SocketSources>.fromOpaque(opaque).release()
             }
             print("-- ➖ unregister: socket \(socket), handle \(easyHandle), sources \(socketSourcePtr!)")
+            let socketReference = beginOperation(for: socket)
+            let completion = DispatchWorkItem {
+                self.endOperation(for: socketReference)
+            }
+            socketSources?.tearDown(socket: socket, queue: queue, completion: completion)
             socketSources = nil
         }
         if let ss = socketSources {
@@ -165,9 +171,78 @@ extension Collection where Element == _EasyHandle {
   }
 }
 
+private extension URLSession._MultiHandle {
+    class _SocketReference {
+        let socket: CFURLSession_socket_t
+        var operationCount: Int
+        var shouldClose: Bool
+        
+        init(socket: CFURLSession_socket_t) {
+            self.socket = socket
+            shouldClose = false
+            operationCount = 0
+        }
+        
+        deinit {
+            print("-- 💀 deinit reference, socket \(socket)")
+            if shouldClose {
+                print("-- 🛑 closing: socket \(socket)")
+                #if os(Windows)
+                    // closesocket(socket)
+                #else
+                    close(socket)
+                #endif
+            }
+        }
+    }
+    
+    func beginOperation(for socket: CFURLSession_socket_t) -> _SocketReference {
+        let reference = reference(for: socket)
+        if reference.operationCount == 0 {
+            socketReferences[socket] = reference
+        }
+        reference.operationCount += 1
+        print("-- ♻️ started operation: socket \(socket), op count \(reference.operationCount)")
+        return reference
+    }
+    
+    func endOperation(for socketReference: _SocketReference) {
+        socketReference.operationCount -= 1
+        if socketReference.operationCount == 0 {
+            socketReferences[socketReference.socket] = nil
+        }
+        print("-- ♻️ ended operation: socket \(socketReference.socket), op count \(socketReference.operationCount)")
+    }
+    
+    func reference(for socket: CFURLSession_socket_t) -> _SocketReference {
+        if let socketReference = socketReferences[socket] { 
+            return socketReference
+        }
+        print("-- ♻️ creating reference: socket \(socket)")
+        return _SocketReference(socket: socket)
+    }
+    
+    func scheduleClose(for socket: CFURLSession_socket_t) {
+        let reference = reference(for: socket) 
+        reference.shouldClose = true
+        print("-- ♻️ scheduled close: socket \(socket), op count \(reference.operationCount)")
+    }
+
+}
+
 internal extension URLSession._MultiHandle {
     /// Add an easy handle -- start its transfer.
     func add(_ handle: _EasyHandle) {
+        // close
+        try! CFURLSession_easy_setopt_ptr(handle.rawHandle, CFURLSessionOptionCLOSESOCKETDATA, UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())).asError()
+        try! CFURLSession_easy_setopt_scl(handle.rawHandle, CFURLSessionOptionCLOSESOCKETFUNCTION) {  (clientp: UnsafeMutableRawPointer?, item: CFURLSession_socket_t) in
+            print("-- 🛑 requested close: socket \(item)")
+            
+            guard let handle = URLSession._MultiHandle.from(callbackUserData: clientp) else { fatalError() }
+            handle.scheduleClose(for: item)
+            return 0
+        }.asError()
+        
         // If this is the first handle being added, we need to `kick` the
         // underlying multi handle by calling `timeoutTimerFired` as
         // described in
@@ -431,7 +506,6 @@ fileprivate class _SocketSources {
 
     func createReadSource(socket: CFURLSession_socket_t, queue: DispatchQueue, handler: DispatchWorkItem) {
         guard readSource == nil else { return }
-        print("-- 👓 creating read source, socket \(socket)")
 #if os(Windows)
         let s = DispatchSource.makeReadSource(handle: HANDLE(bitPattern: Int(socket))!, queue: queue)
 #else
@@ -444,7 +518,6 @@ fileprivate class _SocketSources {
 
     func createWriteSource(socket: CFURLSession_socket_t, queue: DispatchQueue, handler: DispatchWorkItem) {
         guard writeSource == nil else { return }
-        print("-- ✍️ creating write source, socket \(socket)")
 #if os(Windows)
         let s = DispatchSource.makeWriteSource(handle: HANDLE(bitPattern: Int(socket))!, queue: queue)
 #else
@@ -455,25 +528,35 @@ fileprivate class _SocketSources {
         s.resume()
     }
 
-    func tearDown() {
-        if let s = readSource {
-            s.cancel()
+    func tearDown(socket: CFURLSession_socket_t, queue: DispatchQueue, completion: DispatchWorkItem) {
+        let cancelHandlerGroup = DispatchGroup()
+        [readSource, writeSource].compactMap({ $0 }).forEach { source in
+            cancelHandlerGroup.enter()
+            source.setCancelHandler {
+                print("-- ⏹✅ cancelled dispatch source, socket \(socket)")
+                cancelHandlerGroup.leave()
+            }
+            print("-- ⏹ cancelling dispatch source, socket \(socket)")
+            source.cancel()
         }
         readSource = nil
-        if let s = writeSource {
-            s.cancel()
-        }
         writeSource = nil
+        cancelHandlerGroup.notify(queue: queue, work: completion)
     }
+    
 }
 extension _SocketSources {
     /// Create a read and/or write source as specified by the action.
     func createSources(with action: URLSession._MultiHandle._SocketRegisterAction, socket: CFURLSession_socket_t, queue: DispatchQueue, handler: DispatchWorkItem) {
-        if action.needsReadSource {
-            createReadSource(socket: socket, queue: queue, handler: handler)
-        }
-        if action.needsWriteSource {
-            createWriteSource(socket: socket, queue: queue, handler: handler)
+        if action.needsReadSource || action.needsWriteSource {
+            queue.async {
+                if action.needsReadSource {
+                    self.createReadSource(socket: socket, queue: queue, handler: handler)
+                }
+                if action.needsWriteSource {
+                    self.createWriteSource(socket: socket, queue: queue, handler: handler)
+                }    
+            }
         }
     }
 }
