@@ -637,6 +637,42 @@ class TestURLSession: LoopbackServerTest {
         waitForExpectations(timeout: 5)
     }
 
+    func test_slowPost() throws {
+        class DrippingInputStream: InputStream {
+            private var data: Data
+            override public var hasBytesAvailable: Bool {
+                return !data.isEmpty
+            }
+            override public init(data: Data) {
+                self.data = data
+                super.init(data: data)
+            }
+            override public func read(_ buffer: UnsafeMutablePointer<UInt8>, maxLength len: Int) -> Int {
+                let readCount = min(min(len, data.count), 42)
+                data.copyBytes(to: buffer, count: readCount)
+                data = data.advanced(by: readCount)
+                return readCount
+            }
+        }
+        
+        let session = URLSession(configuration: URLSessionConfiguration.default)
+        var dataTask: URLSessionDataTask? = nil
+        
+        let data = Data((0 ..< 2048).map { _ in UInt8.random(in: UInt8.min ... UInt8.max) })
+        var req = URLRequest(url: URL(string: "http://127.0.0.1:\(TestURLSession.serverPort)/POST")!)
+        req.httpMethod = "POST"
+        req.httpBodyStream = DrippingInputStream(data: data)
+
+        let e = expectation(description: "POST completed")
+        dataTask = session.uploadTask(with: req, from: data) { data, response, error in
+            XCTAssertNil(error)
+            e.fulfill()
+        }
+        dataTask?.resume()
+        
+        waitForExpectations(timeout: 5)
+    }
+    
     func test_httpRedirectionWithCode300() throws {
         let statusCode = 300
         for method in httpMethods {
@@ -2240,6 +2276,8 @@ class TestURLSession: LoopbackServerTest {
             ("test_verifyHttpAdditionalHeaders", test_verifyHttpAdditionalHeaders),
             ("test_httpTimeout", test_httpTimeout),
             ("test_connectTimeout", test_connectTimeout),
+            ("test_largePost", test_largePost),
+            ("test_slowPost", test_slowPost),
             ("test_httpRedirectionWithCode300", test_httpRedirectionWithCode300),
             ("test_httpRedirectionWithCode301_302", test_httpRedirectionWithCode301_302),
             ("test_httpRedirectionWithCode303", test_httpRedirectionWithCode303),
