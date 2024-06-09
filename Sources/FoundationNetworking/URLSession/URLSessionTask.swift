@@ -810,7 +810,7 @@ open class URLSessionWebSocketTask : URLSessionTask {
         }
     }
     
-    private func send(_ message: Message, completionHandler: @escaping (Error?) -> Void) {
+    public func send(_ message: Message, completionHandler: @escaping (Error?) -> Void) {
         self.workQueue.async {
             self.sendBuffer.append((message, completionHandler))
             self.doPendingWork()
@@ -826,7 +826,7 @@ open class URLSessionWebSocketTask : URLSessionTask {
         }
     }
 
-    private func receive(completionHandler: @escaping (Result<Message, Error>) -> Void) {
+    public func receive(completionHandler: @escaping (Result<Message, Error>) -> Void) {
         self.workQueue.async {
             self.receiveCompletionHandlers.append(completionHandler)
             self.doPendingWork()
