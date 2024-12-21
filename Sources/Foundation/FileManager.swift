@@ -23,6 +23,10 @@ import WinSDK
 import WASILibc
 #endif
 
+#if canImport(Android)
+import Android
+#endif
+
 #if os(Windows)
 internal typealias NativeFSRCharType = WCHAR
 internal let NativeFSREncoding = String.Encoding.utf16LittleEndian.rawValue

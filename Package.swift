@@ -193,7 +193,8 @@ let package = Package(
                 "BlockRuntime",
                 "CMakeLists.txt"
             ],
-            cSettings: coreFoundationBuildSettings
+            cSettings: coreFoundationBuildSettings,
+            linkerSettings: [.linkedLibrary("log", .when(platforms: [.android]))]
         ),
         .target(
             name: "_CFXMLInterface",
@@ -281,7 +282,7 @@ let package = Package(
                 "Foundation",
                 "FoundationXML",
                 "FoundationNetworking",
-                .targetItem(name: "XCTest", condition: .when(platforms: [.linux])),
+                .targetItem(name: "XCTest", condition: .when(platforms: [.linux, .android])),
                 "Testing",
                 "xdgTestHelper"
             ],

@@ -9,6 +9,10 @@
 
 import Synchronization
 
+#if canImport(Android)
+import Android
+#endif
+
 class TestProcess : XCTestCase {
     
     func test_exit0() throws {
