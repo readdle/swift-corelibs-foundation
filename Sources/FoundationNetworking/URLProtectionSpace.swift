@@ -103,7 +103,6 @@ public let NSURLAuthenticationMethodClientCertificate: String = "NSURLAuthentica
     @const NSURLAuthenticationMethodServerTrust
     @abstract SecTrustRef validation required.  Applies to any protocol.
  */
-@available(*, unavailable, message: "swift-corelibs-foundation does not support methods of authentication that rely on the Darwin Security framework.")
 public let NSURLAuthenticationMethodServerTrust: String = "NSURLAuthenticationMethodServerTrust"
 
 

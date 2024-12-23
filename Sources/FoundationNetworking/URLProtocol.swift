@@ -156,7 +156,6 @@ internal class _ProtocolClient : NSObject, @unchecked Sendable {
     var cacheableResponse: URLResponse?
 }
 
-@available(*, unavailable)
 extension URLProtocol : @unchecked Sendable { }
 
 /*!
