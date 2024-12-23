@@ -950,6 +950,8 @@ open class Process: NSObject, @unchecked Sendable {
             ])
         }
 #endif
+
+#if !os(Android)
         try _throwIfPosixError(posix_spawnattr_init(&spawnAttrs))
         try _throwIfPosixError(posix_spawnattr_setflags(&spawnAttrs, .init(POSIX_SPAWN_SETPGROUP)))
 #if canImport(Darwin)
@@ -964,6 +966,7 @@ open class Process: NSObject, @unchecked Sendable {
             }
             try _throwIfPosixError(_CFPosixSpawnFileActionsAddClose(fileActions, fd))
         }
+#endif
 #endif
 
         // Unsafe fallback for systems missing posix_spawn_file_actions_addchdir[_np]
@@ -995,8 +998,9 @@ open class Process: NSObject, @unchecked Sendable {
                 throw _NSErrorWithErrno(errno, reading: true, path: launchPath)
             }
         })
+#if !os(Android)
         posix_spawnattr_destroy(&spawnAttrs)
-
+#endif
         // Close the write end of the input and output pipes.
         if let pipe = standardInput as? Pipe {
             pipe.fileHandleForReading.closeFile()
