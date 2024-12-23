@@ -351,7 +351,7 @@ extension _EasyHandle {
     }
 
     func set(timeout value: Int) {
-        try! CFURLSession_easy_setopt_long(rawHandle, CFURLSessionOptionTIMEOUT, numericCast(value)).asError()
+        try! CFURLSession_easy_setopt_long(rawHandle, CFURLSessionOptionCONNECTTIMEOUT, numericCast(value)).asError()
     }
 
     func getTimeoutIntervalSpent() -> Double {

@@ -528,12 +528,17 @@ fileprivate class _SocketSources {
     var readSource: DispatchSource?
     var writeSource: DispatchSource?
 
+    var readDupSocket: Int32?
+    var writeDupSocket: Int32?
+
     func createReadSource(socket: CFURLSession_socket_t, queue: DispatchQueue, handler: DispatchWorkItem) {
         guard readSource == nil else { return }
 #if os(Windows)
         let s = DispatchSource.makeReadSource(handle: HANDLE(bitPattern: Int(socket))!, queue: queue)
 #else
-        let s = DispatchSource.makeReadSource(fileDescriptor: socket, queue: queue)
+        let dupSocket = dup(socket)
+        readDupSocket = dupSocket
+        let s = DispatchSource.makeReadSource(fileDescriptor: dupSocket, queue: queue)
 #endif
         s.setEventHandler(handler: handler)
         readSource = s as? DispatchSource
@@ -545,11 +550,30 @@ fileprivate class _SocketSources {
 #if os(Windows)
         let s = DispatchSource.makeWriteSource(handle: HANDLE(bitPattern: Int(socket))!, queue: queue)
 #else
-        let s = DispatchSource.makeWriteSource(fileDescriptor: socket, queue: queue)
+        let dupSocket = dup(socket)
+        writeDupSocket = dupSocket
+        let s = DispatchSource.makeWriteSource(fileDescriptor: dupSocket, queue: queue)
 #endif
         s.setEventHandler(handler: handler)
         writeSource = s as? DispatchSource
         s.resume()
+    }
+
+    deinit {
+        if let readDupSocket = readDupSocket {
+            let cancelWorkItem = DispatchWorkItem(block: {
+                close(readDupSocket)
+            })
+            readSource?.setCancelHandler(handler: cancelWorkItem)
+            readSource?.cancel()
+        }
+        if let writeDupSocket = writeDupSocket {
+            let cancelWorkItem = DispatchWorkItem(block: {
+                close(writeDupSocket)
+            })
+            writeSource?.setCancelHandler(handler: cancelWorkItem)
+            writeSource?.cancel()
+        }
     }
 
     func tearDown(handle: URLSession._MultiHandle, socket: CFURLSession_socket_t, queue: DispatchQueue) {
