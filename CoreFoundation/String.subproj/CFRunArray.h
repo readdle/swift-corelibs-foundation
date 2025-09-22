@@ -28,6 +28,9 @@ CF_EXTERN_C_BEGIN
 */
 typedef struct __CFRunArray *CFRunArrayRef;
 
+CF_EXPORT CFRunArrayRef CFRunArrayRetain(CFRunArrayRef array);
+CF_EXPORT void CFRunArrayRelease(CFRunArrayRef array);
+
 /*! @function CFRunArrayGetTypeID
 Returns the type identifier of all CFAttributedString instances.
 */
