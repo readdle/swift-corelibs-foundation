@@ -1830,9 +1830,15 @@ CF_CROSS_PLATFORM_EXPORT int _CFOpenFileWithMode(const char *path, int opts, mod
 }
 #endif
 
+#if TARGET_OS_WIN32
+int _CFOpenFile(const unsigned short *path, int opts) {
+    return _wopen(path, opts, 0);
+}
+#else
 int _CFOpenFile(const char *path, int opts) {
     return open(path, opts, 0);
 }
+#endif
 
 CF_CROSS_PLATFORM_EXPORT void *_CFReallocf(void *ptr, size_t size) {
 #if TARGET_OS_WIN32 || TARGET_OS_LINUX || TARGET_OS_WASI || defined(__OpenBSD__)

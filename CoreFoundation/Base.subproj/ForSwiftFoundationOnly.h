@@ -556,7 +556,11 @@ CF_CROSS_PLATFORM_EXPORT int _CFOpenFileWithMode(const unsigned short *path, int
 CF_CROSS_PLATFORM_EXPORT int _CFOpenFileWithMode(const char *path, int opts, mode_t mode);
 #endif
 CF_CROSS_PLATFORM_EXPORT void *_CFReallocf(void *ptr, size_t size);
+#if TARGET_OS_WIN32
+CF_CROSS_PLATFORM_EXPORT int _CFOpenFile(const unsigned short *path, int opts);
+#else
 CF_CROSS_PLATFORM_EXPORT int _CFOpenFile(const char *path, int opts);
+#endif
 
 #if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 static inline int _direntNameLength(struct dirent *entry) {

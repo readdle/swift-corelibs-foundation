@@ -801,10 +801,16 @@ extension FileHandle {
     }
     
     internal static func _openFileDescriptorForURL(_ url : URL, flags: Int32, reading: Bool) throws -> Int32 {
+#if os(Windows)
+        let fd = try withNTPathRepresentation(of: url.path) { fsRep in
+            return _CFOpenFile(fsRep, flags)
+        }
+#else
         let fd = url.withUnsafeFileSystemRepresentation( { (fsRep) -> Int32 in
             guard let fsRep = fsRep else { return -1 }
             return _CFOpenFile(fsRep, flags)
         })
+#endif
         if fd < 0 {
             throw _NSErrorWithErrno(errno, reading: reading, url: url)
         }
