@@ -35,10 +35,23 @@ internal let enableDebugOutput: Bool = {
 
 internal class _NativeProtocol: URLProtocol, _EasyHandleDelegate {
     internal var easyHandle: _EasyHandle!
-    internal lazy var tempFileURL: URL = {
+    internal lazy var tempFileURL: URL? = {
         let fileName = NSTemporaryDirectory() + NSUUID().uuidString + ".tmp"
-        _ = FileManager.default.createFile(atPath: fileName, contents: nil)
+        guard FileManager.default.createFile(atPath: fileName, contents: nil) else {
+            NSLog("%@", "NSURLSession: Failed to create temporary download file at \(fileName)")
+            return nil
+        }
         return URL(fileURLWithPath: fileName)
+    }()
+
+    internal lazy var tempFileHandle: FileHandle? = {
+        guard let url = self.tempFileURL else { return nil }
+        do {
+            return try FileHandle(forWritingTo: url)
+        } catch {
+            NSLog("%@", "NSURLSession: Failed to open temporary download file \(url.path): \(error)")
+            return nil
+        }
     }()
 
     public required init(task: URLSessionTask, cachedResponse: CachedURLResponse?, client: URLProtocolClient?) {
@@ -119,7 +132,9 @@ internal class _NativeProtocol: URLProtocol, _EasyHandleDelegate {
             return .proceed
         }
 
-        notifyDelegate(aboutReceivedData: data)
+        guard notifyDelegate(aboutReceivedData: data) else {
+            return .abort
+        }
         internalState = .transferInProgress(ts.byAppending(bodyData: data))
         return .proceed
     }
@@ -131,7 +146,7 @@ internal class _NativeProtocol: URLProtocol, _EasyHandleDelegate {
         return nil
     }
 
-    fileprivate func notifyDelegate(aboutReceivedData data: Data) {
+    fileprivate func notifyDelegate(aboutReceivedData data: Data) -> Bool {
         guard let t = self.task else {
             fatalError("Cannot notify")
         }
@@ -151,7 +166,9 @@ internal class _NativeProtocol: URLProtocol, _EasyHandleDelegate {
             guard let s = self.task?.session as? URLSession else {
                 fatalError()
             }
-            let fileHandle = try! FileHandle(forWritingTo: self.tempFileURL)
+            guard let fileHandle = self.tempFileHandle else {
+                return false
+            }
             _ = fileHandle.seekToEndOfFile()
             fileHandle.write(data)
             task.countOfBytesReceived  += Int64(data.count)
@@ -160,6 +177,7 @@ internal class _NativeProtocol: URLProtocol, _EasyHandleDelegate {
                                             totalBytesExpectedToWrite: task.countOfBytesExpectedToReceive)
             }
         }
+        return true
     }
 
     fileprivate func notifyDelegate(aboutUploadedData count: Int64) {
@@ -273,9 +291,10 @@ internal class _NativeProtocol: URLProtocol, _EasyHandleDelegate {
             self.properties[.temporaryFileURL] = url
             fileHandle.closeFile()
         } else if task is URLSessionDownloadTask {
-            let fileHandle = try! FileHandle(forWritingTo: self.tempFileURL)
-            fileHandle.closeFile()
-            self.properties[.temporaryFileURL] = self.tempFileURL
+            self.tempFileHandle?.closeFile()
+            if let tempURL = self.tempFileURL {
+                self.properties[.temporaryFileURL] = tempURL
+            }
         }
         self.client?.urlProtocolDidFinishLoading(self)
         self.internalState = .taskCompleted
@@ -351,8 +370,10 @@ internal class _NativeProtocol: URLProtocol, _EasyHandleDelegate {
             return .inMemory(nil)
         case .downloadCompletionHandler:
             // Data needs to be written to a file (i.e. a download task).
-            let fileHandle = try! FileHandle(forWritingTo: self.tempFileURL)
-            return .toFile(self.tempFileURL, fileHandle)
+            guard let tempURL = self.tempFileURL else {
+                return .ignore
+            }
+            return .toFile(tempURL, self.tempFileHandle)
         }
     }
 
