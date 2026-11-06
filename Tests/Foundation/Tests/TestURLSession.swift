@@ -1151,6 +1151,26 @@ class TestURLSession: LoopbackServerTest {
         session.invalidateAndCancel()
     }
 
+    // The previous hop's timer must not outlive the redirect it covered: a slow
+    // `needNewBodyStream` answer while starting the next hop is not a timeout.
+    func test_redirectTimerClearedBeforeNextHop() throws {
+        let url = try XCTUnwrap(URL(string: "http://127.0.0.1:\(TestURLSession.serverPort)/redirect/2"))
+        let delegate = RedirectRaceDelegate(completion: expectation(description: "task completes"))
+        delegate.bodyStreamDelay = 2
+        let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: delegate.queue)
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 1
+
+        let task = session.dataTask(with: request)
+        task.resume()
+
+        waitForExpectations(timeout: 15)
+        XCTAssertEqual(delegate.completionCount, 1)
+        XCTAssertNil(delegate.error)
+        XCTAssertEqual((task.response as? HTTPURLResponse)?.statusCode, 200)
+        session.invalidateAndCancel()
+    }
+
     func test_redirectCompletionAfterCancelInDelegate() throws {
         let url = try XCTUnwrap(URL(string: "http://127.0.0.1:\(TestURLSession.serverPort)/redirect/1"))
         let delegate = RedirectRaceDelegate(completion: expectation(description: "task completes"))
@@ -2363,6 +2383,7 @@ class TestURLSession: LoopbackServerTest {
             ("test_willPerformRedirect", test_willPerformRedirect),
             ("test_redirectCompletionAfterTimeout", test_redirectCompletionAfterTimeout),
             ("test_redirectCompletionDelayedPastTimeout", test_redirectCompletionDelayedPastTimeout),
+            ("test_redirectTimerClearedBeforeNextHop", test_redirectTimerClearedBeforeNextHop),
             ("test_redirectCompletionAfterCancelInDelegate", test_redirectCompletionAfterCancelInDelegate),
             ("test_redirectCompletionAfterCancelWhileQueued", test_redirectCompletionAfterCancelWhileQueued),
             ("test_httpRedirectionWithBodyStream", test_httpRedirectionWithBodyStream),
@@ -2446,6 +2467,7 @@ class RedirectRaceDelegate: NSObject, URLSessionDataDelegate {
     }()
     var cancelBeforeCompletingRedirect = false
     var redirectCompletionDelay: TimeInterval = 0
+    var bodyStreamDelay: TimeInterval = 0
     private let completion: XCTestExpectation
     private(set) var completionCount = 0
     private(set) var error: Error?
@@ -2467,6 +2489,10 @@ class RedirectRaceDelegate: NSObject, URLSessionDataDelegate {
         } else {
             completionHandler(request)
         }
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, needNewBodyStream completionHandler: @escaping (InputStream?) -> Void) {
+        DispatchQueue.global().asyncAfter(deadline: .now() + bodyStreamDelay) { completionHandler(nil) }
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {

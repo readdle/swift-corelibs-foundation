@@ -730,6 +730,8 @@ extension _HTTPURLProtocol {
         } else if let r = request {
             lastRedirectBody = nil
             task!.knownBody = nil
+            // The next transfer sets its own timer; this one must not fire while the delegate supplies the body.
+            easyHandle.timeoutTimer = nil
             startNewTransfer(with: r)
         } else {
             // If the redirect is not followed, return the redirect itself as the response
