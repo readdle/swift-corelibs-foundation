@@ -1113,6 +1113,74 @@ class TestURLSession: LoopbackServerTest {
         waitForExpectations(timeout: 5)
     }
 
+    // The redirect callback waits on a busy delegate queue past the request timeout.
+    func test_redirectCompletionAfterTimeout() throws {
+        let url = try XCTUnwrap(URL(string: "http://127.0.0.1:\(TestURLSession.serverPort)/redirect/1"))
+        let delegate = RedirectRaceDelegate(completion: expectation(description: "task completes"))
+        let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: delegate.queue)
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 1
+
+        let task = session.dataTask(with: request)
+        delegate.blockQueue(for: 3)
+        task.resume()
+
+        waitForExpectations(timeout: 10)
+        XCTAssertEqual(delegate.completionCount, 1)
+        XCTAssertEqual((delegate.error as? URLError)?.code, .timedOut)
+        XCTAssertNil(task.response)
+        session.invalidateAndCancel()
+    }
+
+    // Darwin fails the task once a delegate that held the redirect past the timeout answers.
+    func test_redirectCompletionDelayedPastTimeout() throws {
+        let url = try XCTUnwrap(URL(string: "http://127.0.0.1:\(TestURLSession.serverPort)/redirect/1"))
+        let delegate = RedirectRaceDelegate(completion: expectation(description: "task completes"))
+        delegate.redirectCompletionDelay = 3
+        let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: delegate.queue)
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 1
+
+        let task = session.dataTask(with: request)
+        task.resume()
+
+        waitForExpectations(timeout: 10)
+        XCTAssertEqual(delegate.completionCount, 1)
+        XCTAssertEqual((delegate.error as? URLError)?.code, .timedOut)
+        XCTAssertNil(task.response)
+        session.invalidateAndCancel()
+    }
+
+    func test_redirectCompletionAfterCancelInDelegate() throws {
+        let url = try XCTUnwrap(URL(string: "http://127.0.0.1:\(TestURLSession.serverPort)/redirect/1"))
+        let delegate = RedirectRaceDelegate(completion: expectation(description: "task completes"))
+        delegate.cancelBeforeCompletingRedirect = true
+        let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: delegate.queue)
+
+        session.dataTask(with: url).resume()
+
+        waitForExpectations(timeout: 10)
+        XCTAssertEqual(delegate.completionCount, 1)
+        XCTAssertEqual((delegate.error as? URLError)?.code, .cancelled)
+        session.invalidateAndCancel()
+    }
+
+    func test_redirectCompletionAfterCancelWhileQueued() throws {
+        let url = try XCTUnwrap(URL(string: "http://127.0.0.1:\(TestURLSession.serverPort)/redirect/1"))
+        let delegate = RedirectRaceDelegate(completion: expectation(description: "task completes"))
+        let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: delegate.queue)
+
+        let task = session.dataTask(with: url)
+        delegate.blockQueue(for: 2)
+        task.resume()
+        DispatchQueue.global().asyncAfter(deadline: .now() + 1) { task.cancel() }
+
+        waitForExpectations(timeout: 10)
+        XCTAssertEqual(delegate.completionCount, 1)
+        XCTAssertEqual((delegate.error as? URLError)?.code, .cancelled)
+        session.invalidateAndCancel()
+    }
+
     func test_httpNotFound() throws {
         let urlString = "http://127.0.0.1:\(TestURLSession.serverPort)/404"
         let url = try XCTUnwrap(URL(string: urlString))
@@ -2293,6 +2361,10 @@ class TestURLSession: LoopbackServerTest {
             /* ⚠️ */ ("test_httpRedirectionChainInheritsTimeoutInterval", testExpectedToFail(test_httpRedirectionChainInheritsTimeoutInterval, "Flaky on Linux CI: https://bugs.swift.org/browse/SR-14433")),
             /* ⚠️ */ ("test_httpRedirectionExceededMaxRedirects", testExpectedToFail(test_httpRedirectionExceededMaxRedirects, "Flaky on Linux CI: https://bugs.swift.org/browse/SR-14433")),
             ("test_willPerformRedirect", test_willPerformRedirect),
+            ("test_redirectCompletionAfterTimeout", test_redirectCompletionAfterTimeout),
+            ("test_redirectCompletionDelayedPastTimeout", test_redirectCompletionDelayedPastTimeout),
+            ("test_redirectCompletionAfterCancelInDelegate", test_redirectCompletionAfterCancelInDelegate),
+            ("test_redirectCompletionAfterCancelWhileQueued", test_redirectCompletionAfterCancelWhileQueued),
             ("test_httpRedirectionWithBodyStream", test_httpRedirectionWithBodyStream),
             ("test_httpNotFound", test_httpNotFound),
             /* ⚠️ */ ("test_http0_9SimpleResponses", testExpectedToFail(test_http0_9SimpleResponses, "Breaks on Ubunut20.04")),
@@ -2365,6 +2437,46 @@ extension SharedDelegate: URLSessionDownloadDelegate {
     }
 }
 
+
+class RedirectRaceDelegate: NSObject, URLSessionDataDelegate {
+    let queue: OperationQueue = {
+        let queue = OperationQueue()
+        queue.maxConcurrentOperationCount = 1
+        return queue
+    }()
+    var cancelBeforeCompletingRedirect = false
+    var redirectCompletionDelay: TimeInterval = 0
+    private let completion: XCTestExpectation
+    private(set) var completionCount = 0
+    private(set) var error: Error?
+
+    init(completion: XCTestExpectation) {
+        self.completion = completion
+    }
+
+    func blockQueue(for seconds: TimeInterval) {
+        queue.addOperation { Thread.sleep(forTimeInterval: seconds) }
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
+        if cancelBeforeCompletingRedirect {
+            task.cancel()
+        }
+        if redirectCompletionDelay > 0 {
+            DispatchQueue.global().asyncAfter(deadline: .now() + redirectCompletionDelay) { completionHandler(request) }
+        } else {
+            completionHandler(request)
+        }
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        completionCount += 1
+        self.error = error
+        if completionCount == 1 {
+            completion.fulfill()
+        }
+    }
+}
 
 class SessionDelegate: NSObject, URLSessionDelegate, URLSessionWebSocketDelegate {
     var expectation: XCTestExpectation! = nil
