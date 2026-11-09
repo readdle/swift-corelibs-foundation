@@ -437,6 +437,8 @@ internal class _HTTPURLProtocol: _NativeProtocol {
         }
 
         guard let task = self.task else { fatalError() }
+        // The flag belongs to this transfer's timer.
+        timedOutWaitingForRedirect = false
         easyHandle.timeoutTimer = _TimeoutSource(queue: task.workQueue, milliseconds: timeoutInterval, handler: timeoutHandler)
         easyHandle.set(automaticBodyDecompression: true)
         easyHandle.set(requestMethod: request.httpMethod ?? "GET")
